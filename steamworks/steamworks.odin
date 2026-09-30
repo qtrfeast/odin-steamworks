@@ -106,6 +106,8 @@ SteamItemDef :: int
 SteamInventoryResult :: int
 SteamInventoryUpdateHandle :: u64
 RemotePlaySessionID :: u32
+RemotePlayCursorID :: u32
+TimelineEventHandle :: u64
 FnSteamNetConnectionStatusChanged :: #type proc "c" (_: ^SteamNetConnectionStatusChangedCallback)
 FnSteamNetAuthenticationStatusChanged :: #type proc "c" (_: ^SteamNetAuthenticationStatus)
 FnSteamRelayNetworkStatusChanged :: #type proc "c" (_: ^SteamRelayNetworkStatus)
@@ -230,6 +232,7 @@ INPUT_MAX_ANALOG_ACTION_DATA :: 1.0
 
 MAX_TIMELINE_PRIORITY :: 1000
 MAX_TIMELINE_EVENT_DURATION :: 600
+MAX_PHASE_ID_LENGTH :: 64
 
 
 // -------
@@ -352,7 +355,10 @@ PersonaStateChange :: struct #max_field_align(CALLBACK_ALIGN) {
 }
 
 GameOverlayActivated :: struct #max_field_align(CALLBACK_ALIGN) {
-    bActive: u8,
+    bActive:        u8,
+    bUserInitiated: bool,
+    nAppID:         AppId,
+    dwOverlayPID:   u32,
 }
 
 GameServerChangeRequested :: struct #max_field_align(CALLBACK_ALIGN) {
@@ -439,12 +445,6 @@ FriendsEnumerateFollowingList :: struct #max_field_align(CALLBACK_ALIGN) {
     nTotalResultCount: i32,
 }
 
-SetPersonaNameResponse :: struct #max_field_align(CALLBACK_ALIGN) {
-    bSuccess:      bool,
-    bLocalSuccess: bool,
-    result:        EResult,
-}
-
 UnreadChatMessagesChanged :: struct #max_field_align(CALLBACK_ALIGN) {}
 
 OverlayBrowserProtocolNavigation :: struct #max_field_align(CALLBACK_ALIGN) {
@@ -463,6 +463,7 @@ EquippedProfileItems :: struct #max_field_align(CALLBACK_ALIGN) {
     bHasProfileModifier:       bool,
     bHasProfileBackground:     bool,
     bHasMiniProfileBackground: bool,
+    bFromCache:                bool,
 }
 
 IPCountry :: struct #max_field_align(CALLBACK_ALIGN) {}
@@ -486,6 +487,7 @@ CheckFileSignature :: struct #max_field_align(CALLBACK_ALIGN) {
 GamepadTextInputDismissed :: struct #max_field_align(CALLBACK_ALIGN) {
     bSubmitted:      bool,
     unSubmittedText: u32,
+    unAppID:         AppId,
 }
 
 AppResumingFromSuspend :: struct #max_field_align(CALLBACK_ALIGN) {}
@@ -564,65 +566,6 @@ PSNGameBootInviteResult :: struct #max_field_align(CALLBACK_ALIGN) {
 
 FavoritesListAccountsUpdated :: struct #max_field_align(CALLBACK_ALIGN) {
     eResult: EResult,
-}
-
-SearchForGameProgressCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    ullSearchID:               u64,
-    eResult:                   EResult,
-    lobbyID:                   CSteamID,
-    steamIDEndedSearch:        CSteamID,
-    nSecondsRemainingEstimate: i32,
-    cPlayersSearching:         i32,
-}
-
-SearchForGameResultCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    ullSearchID:         u64,
-    eResult:             EResult,
-    nCountPlayersInGame: i32,
-    nCountAcceptedGame:  i32,
-    steamIDHost:         CSteamID,
-    bFinalCallback:      bool,
-}
-
-RequestPlayersForGameProgressCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    eResult:     EResult,
-    ullSearchID: u64,
-}
-
-RequestPlayersForGameResultCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    eResult:                   EResult,
-    ullSearchID:               u64,
-    SteamIDPlayerFound:        CSteamID,
-    SteamIDLobby:              CSteamID,
-    ePlayerAcceptState:        RequestPlayersForGameResultCallbact_PlayerAcceptState,
-    nPlayerIndex:              i32,
-    nTotalPlayersFound:        i32,
-    nTotalPlayersAcceptedGame: i32,
-    nSuggestedTeamIndex:       i32,
-    ullUniqueGameID:           u64,
-}
-
-RequestPlayersForGameResultCallbact_PlayerAcceptState :: enum i32 {
-    EStateUnknown        = 0,
-    EStatePlayerAccepted = 1,
-    EStatePlayerDeclined = 2,
-}
-
-RequestPlayersForGameFinalResultCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    eResult:         EResult,
-    ullSearchID:     u64,
-    ullUniqueGameID: u64,
-}
-
-SubmitPlayerResultResultCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    eResult:         EResult,
-    ullUniqueGameID: u64,
-    steamIDPlayer:   CSteamID,
-}
-
-EndGameResultCallback :: struct #max_field_align(CALLBACK_ALIGN) {
-    eResult:         EResult,
-    ullUniqueGameID: u64,
 }
 
 JoinPartyCallback :: struct #max_field_align(CALLBACK_ALIGN) {
@@ -959,46 +902,6 @@ VolumeHasChanged :: struct #max_field_align(CALLBACK_ALIGN) {
     flNewVolume: f32,
 }
 
-MusicPlayerRemoteWillActivate :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerRemoteWillDeactivate :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerRemoteToFront :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWillQuit :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWantsPlay :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWantsPause :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWantsPlayPrevious :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWantsPlayNext :: struct #max_field_align(CALLBACK_ALIGN) {}
-
-MusicPlayerWantsShuffled :: struct #max_field_align(CALLBACK_ALIGN) {
-    bShuffled: bool,
-}
-
-MusicPlayerWantsLooped :: struct #max_field_align(CALLBACK_ALIGN) {
-    bLooped: bool,
-}
-
-MusicPlayerWantsVolume :: struct #max_field_align(CALLBACK_ALIGN) {
-    flNewVolume: f32,
-}
-
-MusicPlayerSelectsQueueEntry :: struct #max_field_align(CALLBACK_ALIGN) {
-    nID: i32,
-}
-
-MusicPlayerSelectsPlaylistEntry :: struct #max_field_align(CALLBACK_ALIGN) {
-    nID: i32,
-}
-
-MusicPlayerWantsPlayingRepeatStatus :: struct #max_field_align(CALLBACK_ALIGN) {
-    nPlayingRepeatStatus: i32,
-}
-
 HTTPRequestCompleted :: struct #max_field_align(CALLBACK_ALIGN) {
     hRequest:           HTTPRequestHandle,
     ulContextValue:     u64,
@@ -1066,6 +969,8 @@ SubmitItemUpdateResult :: struct #max_field_align(CALLBACK_ALIGN) {
 ItemInstalled :: struct #max_field_align(CALLBACK_ALIGN) {
     unAppID:          AppId,
     nPublishedFileId: PublishedFileId,
+    hLegacyContent:   UGCHandle,
+    unManifestID:     u64,
 }
 
 DownloadItemResult :: struct #max_field_align(CALLBACK_ALIGN) {
@@ -1362,6 +1267,65 @@ SteamRemotePlaySessionDisconnected :: struct #max_field_align(CALLBACK_ALIGN) {
     unSessionID: RemotePlaySessionID,
 }
 
+SteamRemotePlayTogetherGuestInvite :: struct #max_field_align(CALLBACK_ALIGN) {
+    szConnectURL: [1024]u8,
+}
+
+SteamRemotePlaySessionAvatarLoaded :: struct #max_field_align(CALLBACK_ALIGN) {
+    unSessionID: RemotePlaySessionID, // sessionID the avatar has been loaded for
+    iImage:      i32,                 // the image index of the now loaded image
+    iWide:       i32,                 // width of the loaded image
+    iTall:       i32,                 // height of the loaded image
+}
+
+// Mouse motion event data, valid when eType is .MouseMotion
+RemotePlayInputMouseMotion :: struct #max_field_align(CALLBACK_ALIGN) {
+    bAbsolute:     bool, // True if this is absolute mouse motion and flNormalizedX and flNormalizedY are valid
+    flNormalizedX: f32,  // The absolute X position of the mouse, normalized to the display, if bAbsolute is true
+    flNormalizedY: f32,  // The absolute Y position of the mouse, normalized to the display, if bAbsolute is true
+    nDeltaX:       i32,  // Relative mouse motion in the X direction
+    nDeltaY:       i32,  // Relative mouse motion in the Y direction
+}
+
+// Mouse wheel event data, valid when eType is .MouseWheel
+RemotePlayInputMouseWheel :: struct #max_field_align(CALLBACK_ALIGN) {
+    eDirection: ERemotePlayMouseWheelDirection,
+    flAmount:   f32, // 1.0 is a single click of the wheel, 120 units on Windows
+}
+
+// Key event data, valid when eType is .KeyDown or .KeyUp
+RemotePlayInputKey :: struct #max_field_align(CALLBACK_ALIGN) {
+    eScancode:   i32, // Keyboard scancode, common values are defined in ERemotePlayScancode
+    unModifiers: u32, // Mask of ERemotePlayKeyModifier active for this key event
+    unKeycode:   u32, // UCS-4 character generated by the keypress, or 0 if it wasn't a character key, e.g. Delete or Left Arrow
+}
+
+RemotePlayInput :: struct #max_field_align(CALLBACK_ALIGN) {
+    unSessionID: RemotePlaySessionID,
+    eType:       ERemotePlayInputType,
+    using _: struct #raw_union {
+        MouseMotion:  RemotePlayInputMouseMotion, // valid when eType is .MouseMotion
+        eMouseButton: ERemotePlayMouseButton,     // valid when eType is .MouseButtonDown or .MouseButtonUp
+        MouseWheel:   RemotePlayInputMouseWheel,  // valid when eType is .MouseWheel
+        Key:          RemotePlayInputKey,         // valid when eType is .KeyDown or .KeyUp
+        padding:      [64 - 8]u8,                 // Unused space for future use
+    },
+}
+#assert(size_of(RemotePlayInput) == 64)
+
+SteamTimelineGamePhaseRecordingExists :: struct #max_field_align(CALLBACK_ALIGN) {
+    rgchPhaseID:       [MAX_PHASE_ID_LENGTH]u8,
+    ulRecordingMS:     u64,
+    ulLongestClipMS:   u64,
+    unClipCount:       u32,
+    unScreenshotCount: u32,
+}
+
+SteamTimelineEventRecordingExists :: struct #max_field_align(CALLBACK_ALIGN) {
+    ulEventID:        u64,
+    bRecordingExists: bool,
+}
+
 SteamNetworkingMessagesSessionRequest :: struct #packed {
     identityRemote: SteamNetworkingIdentity,
 }
@@ -1625,6 +1589,10 @@ EResult :: enum i32 {
     ChargerRequired                         = 125,
     CachedCredentialInvalid                 = 126,
     PhoneNumberIsVOIP                       = 127,
+    NotSupported                            = 128,
+    FamilySizeLimitExceeded                 = 129,
+    OfflineAppCacheInvalid                  = 130,
+    TryLater                                = 131,
 }
 
 EVoiceResult :: enum i32 {
@@ -1669,16 +1637,17 @@ EBeginAuthSessionResult :: enum i32 {
 }
 
 EAuthSessionResponse :: enum i32 {
-    OK                           = 0,
-    UserNotConnectedToSteam      = 1,
-    NoLicenseOrExpired           = 2,
-    VACBanned                    = 3,
-    LoggedInElseWhere            = 4,
-    VACCheckTimedOut             = 5,
-    AuthTicketCanceled           = 6,
-    AuthTicketInvalidAlreadyUsed = 7,
-    AuthTicketInvalid            = 8,
-    PublisherIssuedBan           = 9,
+    OK                               = 0,
+    UserNotConnectedToSteam          = 1,
+    NoLicenseOrExpired               = 2,
+    VACBanned                        = 3,
+    LoggedInElseWhere                = 4,
+    VACCheckTimedOut                 = 5,
+    AuthTicketCanceled               = 6,
+    AuthTicketInvalidAlreadyUsed     = 7,
+    AuthTicketInvalid                = 8,
+    PublisherIssuedBan               = 9,
+    AuthTicketNetworkIdentityFailure = 10,
 }
 
 EUserHasLicenseForAppResult :: enum i32 {
@@ -1739,7 +1708,18 @@ EChatSteamIDInstanceFlags :: enum i32 {
     InstanceFlagMMSLobby = 131072,
 }
 
+// Flags describing a beta branch, as returned by GetBetaInfo
+EBetaBranchFlags :: enum i32 {
+    None      = 0,
+    Default   = 1,
+    Available = 2,
+    Private   = 4,
+    Selected  = 8,
+    Installed = 16,
+}
+
 ENotificationPosition :: enum i32 {
+    Invalid     = -1,
     TopLeft     = 0,
     TopRight    = 1,
     BottomLeft  = 2,
@@ -1791,6 +1771,7 @@ EMarketNotAllowedReasonFlags :: enum i32 {
     NewPaymentMethodCannotBeVerified = 8192,
     NoRecentPurchases                = 16384,
     AcceptedWalletGift               = 32768,
+    TradeCooldown                    = 65536,
 }
 
 EDurationControlProgress :: enum i32 {
@@ -1818,26 +1799,6 @@ EDurationControlOnlineState :: enum i32 {
     Offline       = 1,
     Online        = 2,
     OnlineHighPri = 3,
-}
-
-EGameSearchErrorCode :: enum i32 {
-    OK                                = 1,
-    Failed_Search_Already_In_Progress = 2,
-    Failed_No_Search_In_Progress      = 3,
-    Failed_Not_Lobby_Leader           = 4,
-    Failed_No_Host_Available          = 5,
-    Failed_Search_Params_Invalid      = 6,
-    Failed_Offline                    = 7,
-    Failed_NotAuthorized              = 8,
-    Failed_Unknown_Error              = 9,
-}
-
-EPlayerResult :: enum i32 {
-    FailedToConnect = 1,
-    Abandoned       = 2,
-    Kicked          = 3,
-    Incomplete      = 4,
-    Completed       = 5,
 }
 
 ESteamIPv6ConnectivityProtocol :: enum i32 {
@@ -1889,17 +1850,6 @@ EFriendFlags :: enum i32 {
     IgnoredFriend        = 1024,
     ChatMember           = 4096,
     All                  = 65535,
-}
-
-EUserRestriction :: enum i32 {
-    None        = 0,
-    Unknown     = 1,
-    AnyChat     = 2,
-    VoiceChat   = 4,
-    GroupChat   = 8,
-    Rating      = 16,
-    GameInvites = 32,
-    Trading     = 64,
 }
 
 EOverlayToStoreFlag :: enum i32 {
@@ -2085,7 +2035,8 @@ EWorkshopFileType :: enum i32 {
     SteamworksAccessInvite = 13,
     SteamVideo             = 14,
     GameManagedItem        = 15,
-    Max                    = 16,
+    Clip                   = 16,
+    Max                    = 17,
 }
 
 EWorkshopVote :: enum i32 {
@@ -2212,7 +2163,7 @@ EVRScreenshotType :: enum i32 {
     StereoPanorama = 5,
 }
 
-AudioPlaybacStatus :: enum i32 {
+AudioPlayback_Status :: enum i32 {
     Undefined = 0,
     Playing   = 1,
     Paused    = 2,
@@ -2231,51 +2182,66 @@ EHTTPMethod :: enum i32 {
 }
 
 EHTTPStatusCode :: enum i32 {
-    CodeInvalid                         = 0,
-    Code100Continue                     = 100,
-    Code101SwitchingProtocols           = 101,
-    Code200OK                           = 200,
-    Code201Created                      = 201,
-    Code202Accepted                     = 202,
-    Code203NonAuthoritative             = 203,
-    Code204NoContent                    = 204,
-    Code205ResetContent                 = 205,
-    Code206PartialContent               = 206,
-    Code300MultipleChoices              = 300,
-    Code301MovedPermanently             = 301,
-    Code302Found                        = 302,
-    Code303SeeOther                     = 303,
-    Code304NotModified                  = 304,
-    Code305UseProxy                     = 305,
-    Code307TemporaryRedirect            = 307,
-    Code400BadRequest                   = 400,
-    Code401Unauthorized                 = 401,
-    Code402PaymentRequired              = 402,
-    Code403Forbidden                    = 403,
-    Code404NotFound                     = 404,
-    Code405MethodNotAllowed             = 405,
-    Code406NotAcceptable                = 406,
-    Code407ProxyAuthRequired            = 407,
-    Code408RequestTimeout               = 408,
-    Code409Conflict                     = 409,
-    Code410Gone                         = 410,
-    Code411LengthRequired               = 411,
-    Code412PreconditionFailed           = 412,
-    Code413RequestEntityTooLarge        = 413,
-    Code414RequestURITooLong            = 414,
-    Code415UnsupportedMediaType         = 415,
-    Code416RequestedRangeNotSatisfiable = 416,
-    Code417ExpectationFailed            = 417,
-    Code4xxUnknown                      = 418,
-    Code429TooManyRequests              = 429,
-    Code444ConnectionClosed             = 444,
-    Code500InternalServerError          = 500,
-    Code501NotImplemented               = 501,
-    Code502BadGateway                   = 502,
-    Code503ServiceUnavailable           = 503,
-    Code504GatewayTimeout               = 504,
-    Code505HTTPVersionNotSupported      = 505,
-    Code5xxUnknown                      = 599,
+    CodeInvalid                          = 0,
+    Code100Continue                      = 100,
+    Code101SwitchingProtocols            = 101,
+    Code200OK                            = 200,
+    Code201Created                       = 201,
+    Code202Accepted                      = 202,
+    Code203NonAuthoritative              = 203,
+    Code204NoContent                     = 204,
+    Code205ResetContent                  = 205,
+    Code206PartialContent                = 206,
+    Code300MultipleChoices               = 300,
+    Code301MovedPermanently              = 301,
+    Code302Found                         = 302,
+    Code303SeeOther                      = 303,
+    Code304NotModified                   = 304,
+    Code305UseProxy                      = 305,
+    Code307TemporaryRedirect             = 307,
+    Code308PermanentRedirect             = 308,
+    Code400BadRequest                    = 400,
+    Code401Unauthorized                  = 401,
+    Code402PaymentRequired               = 402,
+    Code403Forbidden                     = 403,
+    Code404NotFound                      = 404,
+    Code405MethodNotAllowed              = 405,
+    Code406NotAcceptable                 = 406,
+    Code407ProxyAuthRequired             = 407,
+    Code408RequestTimeout                = 408,
+    Code409Conflict                      = 409,
+    Code410Gone                          = 410,
+    Code411LengthRequired                = 411,
+    Code412PreconditionFailed            = 412,
+    Code413RequestEntityTooLarge         = 413,
+    Code414RequestURITooLong             = 414,
+    Code415UnsupportedMediaType          = 415,
+    Code416RequestedRangeNotSatisfiable  = 416,
+    Code417ExpectationFailed             = 417,
+    Code4xxUnknown                       = 418,
+    Code421MisdirectedRequest            = 421,
+    Code422UnprocessableContent          = 422,
+    Code423Locked                        = 423,
+    Code424FailedDependency              = 424,
+    Code425TooEarly                      = 425,
+    Code426UpgradeRequired               = 426,
+    Code428PreconditionRequired          = 428,
+    Code429TooManyRequests               = 429,
+    Code431RequestHeaderFieldsTooLarge   = 431,
+    Code444ConnectionClosed              = 444,
+    Code451UnavailableForLegalReasons    = 451,
+    Code500InternalServerError           = 500,
+    Code501NotImplemented                = 501,
+    Code502BadGateway                    = 502,
+    Code503ServiceUnavailable            = 503,
+    Code504GatewayTimeout                = 504,
+    Code505HTTPVersionNotSupported       = 505,
+    Code506VariantAlsoNegotiates         = 506,
+    Code507InsufficientStorage           = 507,
+    Code508LoopDetected                  = 508,
+    Code510NotExtended                   = 510,
+    Code511NetworkAuthenticationRequired = 511,
+    Code5xxUnknown                       = 599,
 }
 
 EInputSourceMode :: enum i32 {
@@ -2299,414 +2265,503 @@ EInputSourceMode :: enum i32 {
 }
 
 EInputActionOrigin :: enum i32 {
-    None                               = 0,
-    SteamController_A                  = 1,
-    SteamController_B                  = 2,
-    SteamController_X                  = 3,
-    SteamController_Y                  = 4,
-    SteamController_LeftBumper         = 5,
-    SteamController_RightBumper        = 6,
-    SteamController_LeftGrip           = 7,
-    SteamController_RightGrip          = 8,
-    SteamController_Start              = 9,
-    SteamController_Back               = 10,
-    SteamController_LeftPad_Touch      = 11,
-    SteamController_LeftPad_Swipe      = 12,
-    SteamController_LeftPad_Click      = 13,
-    SteamController_LeftPad_DPadNorth  = 14,
-    SteamController_LeftPad_DPadSouth  = 15,
-    SteamController_LeftPad_DPadWest   = 16,
-    SteamController_LeftPad_DPadEast   = 17,
-    SteamController_RightPad_Touch     = 18,
-    SteamController_RightPad_Swipe     = 19,
-    SteamController_RightPad_Click     = 20,
-    SteamController_RightPad_DPadNorth = 21,
-    SteamController_RightPad_DPadSouth = 22,
-    SteamController_RightPad_DPadWest  = 23,
-    SteamController_RightPad_DPadEast  = 24,
-    SteamController_LeftTrigger_Pull   = 25,
-    SteamController_LeftTrigger_Click  = 26,
-    SteamController_RightTrigger_Pull  = 27,
-    SteamController_RightTrigger_Click = 28,
-    SteamController_LeftSticMove       = 29,
-    SteamController_LeftSticClick      = 30,
-    SteamController_LeftSticDPadNorth  = 31,
-    SteamController_LeftSticDPadSouth  = 32,
-    SteamController_LeftSticDPadWest   = 33,
-    SteamController_LeftSticDPadEast   = 34,
-    SteamController_Gyro_Move          = 35,
-    SteamController_Gyro_Pitch         = 36,
-    SteamController_Gyro_Yaw           = 37,
-    SteamController_Gyro_Roll          = 38,
-    SteamController_Reserved0          = 39,
-    SteamController_Reserved1          = 40,
-    SteamController_Reserved2          = 41,
-    SteamController_Reserved3          = 42,
-    SteamController_Reserved4          = 43,
-    SteamController_Reserved5          = 44,
-    SteamController_Reserved6          = 45,
-    SteamController_Reserved7          = 46,
-    SteamController_Reserved8          = 47,
-    SteamController_Reserved9          = 48,
-    SteamController_Reserved10         = 49,
-    PS4_X                              = 50,
-    PS4_Circle                         = 51,
-    PS4_Triangle                       = 52,
-    PS4_Square                         = 53,
-    PS4_LeftBumper                     = 54,
-    PS4_RightBumper                    = 55,
-    PS4_Options                        = 56,
-    PS4_Share                          = 57,
-    PS4_LeftPad_Touch                  = 58,
-    PS4_LeftPad_Swipe                  = 59,
-    PS4_LeftPad_Click                  = 60,
-    PS4_LeftPad_DPadNorth              = 61,
-    PS4_LeftPad_DPadSouth              = 62,
-    PS4_LeftPad_DPadWest               = 63,
-    PS4_LeftPad_DPadEast               = 64,
-    PS4_RightPad_Touch                 = 65,
-    PS4_RightPad_Swipe                 = 66,
-    PS4_RightPad_Click                 = 67,
-    PS4_RightPad_DPadNorth             = 68,
-    PS4_RightPad_DPadSouth             = 69,
-    PS4_RightPad_DPadWest              = 70,
-    PS4_RightPad_DPadEast              = 71,
-    PS4_CenterPad_Touch                = 72,
-    PS4_CenterPad_Swipe                = 73,
-    PS4_CenterPad_Click                = 74,
-    PS4_CenterPad_DPadNorth            = 75,
-    PS4_CenterPad_DPadSouth            = 76,
-    PS4_CenterPad_DPadWest             = 77,
-    PS4_CenterPad_DPadEast             = 78,
-    PS4_LeftTrigger_Pull               = 79,
-    PS4_LeftTrigger_Click              = 80,
-    PS4_RightTrigger_Pull              = 81,
-    PS4_RightTrigger_Click             = 82,
-    PS4_LeftSticMove                   = 83,
-    PS4_LeftSticClick                  = 84,
-    PS4_LeftSticDPadNorth              = 85,
-    PS4_LeftSticDPadSouth              = 86,
-    PS4_LeftSticDPadWest               = 87,
-    PS4_LeftSticDPadEast               = 88,
-    PS4_RightSticMove                  = 89,
-    PS4_RightSticClick                 = 90,
-    PS4_RightSticDPadNorth             = 91,
-    PS4_RightSticDPadSouth             = 92,
-    PS4_RightSticDPadWest              = 93,
-    PS4_RightSticDPadEast              = 94,
-    PS4_DPad_North                     = 95,
-    PS4_DPad_South                     = 96,
-    PS4_DPad_West                      = 97,
-    PS4_DPad_East                      = 98,
-    PS4_Gyro_Move                      = 99,
-    PS4_Gyro_Pitch                     = 100,
-    PS4_Gyro_Yaw                       = 101,
-    PS4_Gyro_Roll                      = 102,
-    PS4_DPad_Move                      = 103,
-    PS4_Reserved1                      = 104,
-    PS4_Reserved2                      = 105,
-    PS4_Reserved3                      = 106,
-    PS4_Reserved4                      = 107,
-    PS4_Reserved5                      = 108,
-    PS4_Reserved6                      = 109,
-    PS4_Reserved7                      = 110,
-    PS4_Reserved8                      = 111,
-    PS4_Reserved9                      = 112,
-    PS4_Reserved10                     = 113,
-    XBoxOne_A                          = 114,
-    XBoxOne_B                          = 115,
-    XBoxOne_X                          = 116,
-    XBoxOne_Y                          = 117,
-    XBoxOne_LeftBumper                 = 118,
-    XBoxOne_RightBumper                = 119,
-    XBoxOne_Menu                       = 120,
-    XBoxOne_View                       = 121,
-    XBoxOne_LeftTrigger_Pull           = 122,
-    XBoxOne_LeftTrigger_Click          = 123,
-    XBoxOne_RightTrigger_Pull          = 124,
-    XBoxOne_RightTrigger_Click         = 125,
-    XBoxOne_LeftSticMove               = 126,
-    XBoxOne_LeftSticClick              = 127,
-    XBoxOne_LeftSticDPadNorth          = 128,
-    XBoxOne_LeftSticDPadSouth          = 129,
-    XBoxOne_LeftSticDPadWest           = 130,
-    XBoxOne_LeftSticDPadEast           = 131,
-    XBoxOne_RightSticMove              = 132,
-    XBoxOne_RightSticClick             = 133,
-    XBoxOne_RightSticDPadNorth         = 134,
-    XBoxOne_RightSticDPadSouth         = 135,
-    XBoxOne_RightSticDPadWest          = 136,
-    XBoxOne_RightSticDPadEast          = 137,
-    XBoxOne_DPad_North                 = 138,
-    XBoxOne_DPad_South                 = 139,
-    XBoxOne_DPad_West                  = 140,
-    XBoxOne_DPad_East                  = 141,
-    XBoxOne_DPad_Move                  = 142,
-    XBoxOne_LeftGrip_Lower             = 143,
-    XBoxOne_LeftGrip_Upper             = 144,
-    XBoxOne_RightGrip_Lower            = 145,
-    XBoxOne_RightGrip_Upper            = 146,
-    XBoxOne_Share                      = 147,
-    XBoxOne_Reserved6                  = 148,
-    XBoxOne_Reserved7                  = 149,
-    XBoxOne_Reserved8                  = 150,
-    XBoxOne_Reserved9                  = 151,
-    XBoxOne_Reserved10                 = 152,
-    XBox360_A                          = 153,
-    XBox360_B                          = 154,
-    XBox360_X                          = 155,
-    XBox360_Y                          = 156,
-    XBox360_LeftBumper                 = 157,
-    XBox360_RightBumper                = 158,
-    XBox360_Start                      = 159,
-    XBox360_Back                       = 160,
-    XBox360_LeftTrigger_Pull           = 161,
-    XBox360_LeftTrigger_Click          = 162,
-    XBox360_RightTrigger_Pull          = 163,
-    XBox360_RightTrigger_Click         = 164,
-    XBox360_LeftSticMove               = 165,
-    XBox360_LeftSticClick              = 166,
-    XBox360_LeftSticDPadNorth          = 167,
-    XBox360_LeftSticDPadSouth          = 168,
-    XBox360_LeftSticDPadWest           = 169,
-    XBox360_LeftSticDPadEast           = 170,
-    XBox360_RightSticMove              = 171,
-    XBox360_RightSticClick             = 172,
-    XBox360_RightSticDPadNorth         = 173,
-    XBox360_RightSticDPadSouth         = 174,
-    XBox360_RightSticDPadWest          = 175,
-    XBox360_RightSticDPadEast          = 176,
-    XBox360_DPad_North                 = 177,
-    XBox360_DPad_South                 = 178,
-    XBox360_DPad_West                  = 179,
-    XBox360_DPad_East                  = 180,
-    XBox360_DPad_Move                  = 181,
-    XBox360_Reserved1                  = 182,
-    XBox360_Reserved2                  = 183,
-    XBox360_Reserved3                  = 184,
-    XBox360_Reserved4                  = 185,
-    XBox360_Reserved5                  = 186,
-    XBox360_Reserved6                  = 187,
-    XBox360_Reserved7                  = 188,
-    XBox360_Reserved8                  = 189,
-    XBox360_Reserved9                  = 190,
-    XBox360_Reserved10                 = 191,
-    Switch_A                           = 192,
-    Switch_B                           = 193,
-    Switch_X                           = 194,
-    Switch_Y                           = 195,
-    Switch_LeftBumper                  = 196,
-    Switch_RightBumper                 = 197,
-    Switch_Plus                        = 198,
-    Switch_Minus                       = 199,
-    Switch_Capture                     = 200,
-    Switch_LeftTrigger_Pull            = 201,
-    Switch_LeftTrigger_Click           = 202,
-    Switch_RightTrigger_Pull           = 203,
-    Switch_RightTrigger_Click          = 204,
-    Switch_LeftSticMove                = 205,
-    Switch_LeftSticClick               = 206,
-    Switch_LeftSticDPadNorth           = 207,
-    Switch_LeftSticDPadSouth           = 208,
-    Switch_LeftSticDPadWest            = 209,
-    Switch_LeftSticDPadEast            = 210,
-    Switch_RightSticMove               = 211,
-    Switch_RightSticClick              = 212,
-    Switch_RightSticDPadNorth          = 213,
-    Switch_RightSticDPadSouth          = 214,
-    Switch_RightSticDPadWest           = 215,
-    Switch_RightSticDPadEast           = 216,
-    Switch_DPad_North                  = 217,
-    Switch_DPad_South                  = 218,
-    Switch_DPad_West                   = 219,
-    Switch_DPad_East                   = 220,
-    Switch_ProGyro_Move                = 221,
-    Switch_ProGyro_Pitch               = 222,
-    Switch_ProGyro_Yaw                 = 223,
-    Switch_ProGyro_Roll                = 224,
-    Switch_DPad_Move                   = 225,
-    Switch_Reserved1                   = 226,
-    Switch_Reserved2                   = 227,
-    Switch_Reserved3                   = 228,
-    Switch_Reserved4                   = 229,
-    Switch_Reserved5                   = 230,
-    Switch_Reserved6                   = 231,
-    Switch_Reserved7                   = 232,
-    Switch_Reserved8                   = 233,
-    Switch_Reserved9                   = 234,
-    Switch_Reserved10                  = 235,
-    Switch_RightGyro_Move              = 236,
-    Switch_RightGyro_Pitch             = 237,
-    Switch_RightGyro_Yaw               = 238,
-    Switch_RightGyro_Roll              = 239,
-    Switch_LeftGyro_Move               = 240,
-    Switch_LeftGyro_Pitch              = 241,
-    Switch_LeftGyro_Yaw                = 242,
-    Switch_LeftGyro_Roll               = 243,
-    Switch_LeftGrip_Lower              = 244,
-    Switch_LeftGrip_Upper              = 245,
-    Switch_RightGrip_Lower             = 246,
-    Switch_RightGrip_Upper             = 247,
-    Switch_Reserved11                  = 248,
-    Switch_Reserved12                  = 249,
-    Switch_Reserved13                  = 250,
-    Switch_Reserved14                  = 251,
-    Switch_Reserved15                  = 252,
-    Switch_Reserved16                  = 253,
-    Switch_Reserved17                  = 254,
-    Switch_Reserved18                  = 255,
-    Switch_Reserved19                  = 256,
-    Switch_Reserved20                  = 257,
-    PS5_X                              = 258,
-    PS5_Circle                         = 259,
-    PS5_Triangle                       = 260,
-    PS5_Square                         = 261,
-    PS5_LeftBumper                     = 262,
-    PS5_RightBumper                    = 263,
-    PS5_Option                         = 264,
-    PS5_Create                         = 265,
-    PS5_Mute                           = 266,
-    PS5_LeftPad_Touch                  = 267,
-    PS5_LeftPad_Swipe                  = 268,
-    PS5_LeftPad_Click                  = 269,
-    PS5_LeftPad_DPadNorth              = 270,
-    PS5_LeftPad_DPadSouth              = 271,
-    PS5_LeftPad_DPadWest               = 272,
-    PS5_LeftPad_DPadEast               = 273,
-    PS5_RightPad_Touch                 = 274,
-    PS5_RightPad_Swipe                 = 275,
-    PS5_RightPad_Click                 = 276,
-    PS5_RightPad_DPadNorth             = 277,
-    PS5_RightPad_DPadSouth             = 278,
-    PS5_RightPad_DPadWest              = 279,
-    PS5_RightPad_DPadEast              = 280,
-    PS5_CenterPad_Touch                = 281,
-    PS5_CenterPad_Swipe                = 282,
-    PS5_CenterPad_Click                = 283,
-    PS5_CenterPad_DPadNorth            = 284,
-    PS5_CenterPad_DPadSouth            = 285,
-    PS5_CenterPad_DPadWest             = 286,
-    PS5_CenterPad_DPadEast             = 287,
-    PS5_LeftTrigger_Pull               = 288,
-    PS5_LeftTrigger_Click              = 289,
-    PS5_RightTrigger_Pull              = 290,
-    PS5_RightTrigger_Click             = 291,
-    PS5_LeftSticMove                   = 292,
-    PS5_LeftSticClick                  = 293,
-    PS5_LeftSticDPadNorth              = 294,
-    PS5_LeftSticDPadSouth              = 295,
-    PS5_LeftSticDPadWest               = 296,
-    PS5_LeftSticDPadEast               = 297,
-    PS5_RightSticMove                  = 298,
-    PS5_RightSticClick                 = 299,
-    PS5_RightSticDPadNorth             = 300,
-    PS5_RightSticDPadSouth             = 301,
-    PS5_RightSticDPadWest              = 302,
-    PS5_RightSticDPadEast              = 303,
-    PS5_DPad_North                     = 304,
-    PS5_DPad_South                     = 305,
-    PS5_DPad_West                      = 306,
-    PS5_DPad_East                      = 307,
-    PS5_Gyro_Move                      = 308,
-    PS5_Gyro_Pitch                     = 309,
-    PS5_Gyro_Yaw                       = 310,
-    PS5_Gyro_Roll                      = 311,
-    PS5_DPad_Move                      = 312,
-    PS5_Reserved1                      = 313,
-    PS5_Reserved2                      = 314,
-    PS5_Reserved3                      = 315,
-    PS5_Reserved4                      = 316,
-    PS5_Reserved5                      = 317,
-    PS5_Reserved6                      = 318,
-    PS5_Reserved7                      = 319,
-    PS5_Reserved8                      = 320,
-    PS5_Reserved9                      = 321,
-    PS5_Reserved10                     = 322,
-    PS5_Reserved11                     = 323,
-    PS5_Reserved12                     = 324,
-    PS5_Reserved13                     = 325,
-    PS5_Reserved14                     = 326,
-    PS5_Reserved15                     = 327,
-    PS5_Reserved16                     = 328,
-    PS5_Reserved17                     = 329,
-    PS5_Reserved18                     = 330,
-    PS5_Reserved19                     = 331,
-    PS5_Reserved20                     = 332,
-    SteamDecA                          = 333,
-    SteamDecB                          = 334,
-    SteamDecX                          = 335,
-    SteamDecY                          = 336,
-    SteamDecL1                         = 337,
-    SteamDecR1                         = 338,
-    SteamDecMenu                       = 339,
-    SteamDecView                       = 340,
-    SteamDecLeftPad_Touch              = 341,
-    SteamDecLeftPad_Swipe              = 342,
-    SteamDecLeftPad_Click              = 343,
-    SteamDecLeftPad_DPadNorth          = 344,
-    SteamDecLeftPad_DPadSouth          = 345,
-    SteamDecLeftPad_DPadWest           = 346,
-    SteamDecLeftPad_DPadEast           = 347,
-    SteamDecRightPad_Touch             = 348,
-    SteamDecRightPad_Swipe             = 349,
-    SteamDecRightPad_Click             = 350,
-    SteamDecRightPad_DPadNorth         = 351,
-    SteamDecRightPad_DPadSouth         = 352,
-    SteamDecRightPad_DPadWest          = 353,
-    SteamDecRightPad_DPadEast          = 354,
-    SteamDecL2_SoftPull                = 355,
-    SteamDecL2                         = 356,
-    SteamDecR2_SoftPull                = 357,
-    SteamDecR2                         = 358,
-    SteamDecLeftSticMove               = 359,
-    SteamDecL3                         = 360,
-    SteamDecLeftSticDPadNorth          = 361,
-    SteamDecLeftSticDPadSouth          = 362,
-    SteamDecLeftSticDPadWest           = 363,
-    SteamDecLeftSticDPadEast           = 364,
-    SteamDecLeftSticTouch              = 365,
-    SteamDecRightSticMove              = 366,
-    SteamDecR3                         = 367,
-    SteamDecRightSticDPadNorth         = 368,
-    SteamDecRightSticDPadSouth         = 369,
-    SteamDecRightSticDPadWest          = 370,
-    SteamDecRightSticDPadEast          = 371,
-    SteamDecRightSticTouch             = 372,
-    SteamDecL4                         = 373,
-    SteamDecR4                         = 374,
-    SteamDecL5                         = 375,
-    SteamDecR5                         = 376,
-    SteamDecDPad_Move                  = 377,
-    SteamDecDPad_North                 = 378,
-    SteamDecDPad_South                 = 379,
-    SteamDecDPad_West                  = 380,
-    SteamDecDPad_East                  = 381,
-    SteamDecGyro_Move                  = 382,
-    SteamDecGyro_Pitch                 = 383,
-    SteamDecGyro_Yaw                   = 384,
-    SteamDecGyro_Roll                  = 385,
-    SteamDecReserved1                  = 386,
-    SteamDecReserved2                  = 387,
-    SteamDecReserved3                  = 388,
-    SteamDecReserved4                  = 389,
-    SteamDecReserved5                  = 390,
-    SteamDecReserved6                  = 391,
-    SteamDecReserved7                  = 392,
-    SteamDecReserved8                  = 393,
-    SteamDecReserved9                  = 394,
-    SteamDecReserved10                 = 395,
-    SteamDecReserved11                 = 396,
-    SteamDecReserved12                 = 397,
-    SteamDecReserved13                 = 398,
-    SteamDecReserved14                 = 399,
-    SteamDecReserved15                 = 400,
-    SteamDecReserved16                 = 401,
-    SteamDecReserved17                 = 402,
-    SteamDecReserved18                 = 403,
-    SteamDecReserved19                 = 404,
-    SteamDecReserved20                 = 405,
-    Count                              = 406,
-    MaximumPossibleValue               = 32767,
+    None                                = 0,
+    SteamController_A                   = 1,
+    SteamController_B                   = 2,
+    SteamController_X                   = 3,
+    SteamController_Y                   = 4,
+    SteamController_LeftBumper          = 5,
+    SteamController_RightBumper         = 6,
+    SteamController_LeftGrip            = 7,
+    SteamController_RightGrip           = 8,
+    SteamController_Start               = 9,
+    SteamController_Back                = 10,
+    SteamController_LeftPad_Touch       = 11,
+    SteamController_LeftPad_Swipe       = 12,
+    SteamController_LeftPad_Click       = 13,
+    SteamController_LeftPad_DPadNorth   = 14,
+    SteamController_LeftPad_DPadSouth   = 15,
+    SteamController_LeftPad_DPadWest    = 16,
+    SteamController_LeftPad_DPadEast    = 17,
+    SteamController_RightPad_Touch      = 18,
+    SteamController_RightPad_Swipe      = 19,
+    SteamController_RightPad_Click      = 20,
+    SteamController_RightPad_DPadNorth  = 21,
+    SteamController_RightPad_DPadSouth  = 22,
+    SteamController_RightPad_DPadWest   = 23,
+    SteamController_RightPad_DPadEast   = 24,
+    SteamController_LeftTrigger_Pull    = 25,
+    SteamController_LeftTrigger_Click   = 26,
+    SteamController_RightTrigger_Pull   = 27,
+    SteamController_RightTrigger_Click  = 28,
+    SteamController_LeftStick_Move      = 29,
+    SteamController_LeftStick_Click     = 30,
+    SteamController_LeftStick_DPadNorth = 31,
+    SteamController_LeftStick_DPadSouth = 32,
+    SteamController_LeftStick_DPadWest  = 33,
+    SteamController_LeftStick_DPadEast  = 34,
+    SteamController_Gyro_Move           = 35,
+    SteamController_Gyro_Pitch          = 36,
+    SteamController_Gyro_Yaw            = 37,
+    SteamController_Gyro_Roll           = 38,
+    SteamController_Reserved0           = 39,
+    SteamController_Reserved1           = 40,
+    SteamController_Reserved2           = 41,
+    SteamController_Reserved3           = 42,
+    SteamController_Reserved4           = 43,
+    SteamController_Reserved5           = 44,
+    SteamController_Reserved6           = 45,
+    SteamController_Reserved7           = 46,
+    SteamController_Reserved8           = 47,
+    SteamController_Reserved9           = 48,
+    SteamController_Reserved10          = 49,
+    PS4_X                               = 50,
+    PS4_Circle                          = 51,
+    PS4_Triangle                        = 52,
+    PS4_Square                          = 53,
+    PS4_LeftBumper                      = 54,
+    PS4_RightBumper                     = 55,
+    PS4_Options                         = 56,
+    PS4_Share                           = 57,
+    PS4_LeftPad_Touch                   = 58,
+    PS4_LeftPad_Swipe                   = 59,
+    PS4_LeftPad_Click                   = 60,
+    PS4_LeftPad_DPadNorth               = 61,
+    PS4_LeftPad_DPadSouth               = 62,
+    PS4_LeftPad_DPadWest                = 63,
+    PS4_LeftPad_DPadEast                = 64,
+    PS4_RightPad_Touch                  = 65,
+    PS4_RightPad_Swipe                  = 66,
+    PS4_RightPad_Click                  = 67,
+    PS4_RightPad_DPadNorth              = 68,
+    PS4_RightPad_DPadSouth              = 69,
+    PS4_RightPad_DPadWest               = 70,
+    PS4_RightPad_DPadEast               = 71,
+    PS4_CenterPad_Touch                 = 72,
+    PS4_CenterPad_Swipe                 = 73,
+    PS4_CenterPad_Click                 = 74,
+    PS4_CenterPad_DPadNorth             = 75,
+    PS4_CenterPad_DPadSouth             = 76,
+    PS4_CenterPad_DPadWest              = 77,
+    PS4_CenterPad_DPadEast              = 78,
+    PS4_LeftTrigger_Pull                = 79,
+    PS4_LeftTrigger_Click               = 80,
+    PS4_RightTrigger_Pull               = 81,
+    PS4_RightTrigger_Click              = 82,
+    PS4_LeftStick_Move                  = 83,
+    PS4_LeftStick_Click                 = 84,
+    PS4_LeftStick_DPadNorth             = 85,
+    PS4_LeftStick_DPadSouth             = 86,
+    PS4_LeftStick_DPadWest              = 87,
+    PS4_LeftStick_DPadEast              = 88,
+    PS4_RightStick_Move                 = 89,
+    PS4_RightStick_Click                = 90,
+    PS4_RightStick_DPadNorth            = 91,
+    PS4_RightStick_DPadSouth            = 92,
+    PS4_RightStick_DPadWest             = 93,
+    PS4_RightStick_DPadEast             = 94,
+    PS4_DPad_North                      = 95,
+    PS4_DPad_South                      = 96,
+    PS4_DPad_West                       = 97,
+    PS4_DPad_East                       = 98,
+    PS4_Gyro_Move                       = 99,
+    PS4_Gyro_Pitch                      = 100,
+    PS4_Gyro_Yaw                        = 101,
+    PS4_Gyro_Roll                       = 102,
+    PS4_DPad_Move                       = 103,
+    PS4_Reserved1                       = 104,
+    PS4_Reserved2                       = 105,
+    PS4_Reserved3                       = 106,
+    PS4_Reserved4                       = 107,
+    PS4_Reserved5                       = 108,
+    PS4_Reserved6                       = 109,
+    PS4_Reserved7                       = 110,
+    PS4_Reserved8                       = 111,
+    PS4_Reserved9                       = 112,
+    PS4_Reserved10                      = 113,
+    XBoxOne_A                           = 114,
+    XBoxOne_B                           = 115,
+    XBoxOne_X                           = 116,
+    XBoxOne_Y                           = 117,
+    XBoxOne_LeftBumper                  = 118,
+    XBoxOne_RightBumper                 = 119,
+    XBoxOne_Menu                        = 120,
+    XBoxOne_View                        = 121,
+    XBoxOne_LeftTrigger_Pull            = 122,
+    XBoxOne_LeftTrigger_Click           = 123,
+    XBoxOne_RightTrigger_Pull           = 124,
+    XBoxOne_RightTrigger_Click          = 125,
+    XBoxOne_LeftStick_Move              = 126,
+    XBoxOne_LeftStick_Click             = 127,
+    XBoxOne_LeftStick_DPadNorth         = 128,
+    XBoxOne_LeftStick_DPadSouth         = 129,
+    XBoxOne_LeftStick_DPadWest          = 130,
+    XBoxOne_LeftStick_DPadEast          = 131,
+    XBoxOne_RightStick_Move             = 132,
+    XBoxOne_RightStick_Click            = 133,
+    XBoxOne_RightStick_DPadNorth        = 134,
+    XBoxOne_RightStick_DPadSouth        = 135,
+    XBoxOne_RightStick_DPadWest         = 136,
+    XBoxOne_RightStick_DPadEast         = 137,
+    XBoxOne_DPad_North                  = 138,
+    XBoxOne_DPad_South                  = 139,
+    XBoxOne_DPad_West                   = 140,
+    XBoxOne_DPad_East                   = 141,
+    XBoxOne_DPad_Move                   = 142,
+    XBoxOne_LeftGrip_Lower              = 143,
+    XBoxOne_LeftGrip_Upper              = 144,
+    XBoxOne_RightGrip_Lower             = 145,
+    XBoxOne_RightGrip_Upper             = 146,
+    XBoxOne_Share                       = 147,
+    XBoxOne_Reserved6                   = 148,
+    XBoxOne_Reserved7                   = 149,
+    XBoxOne_Reserved8                   = 150,
+    XBoxOne_Reserved9                   = 151,
+    XBoxOne_Reserved10                  = 152,
+    XBox360_A                           = 153,
+    XBox360_B                           = 154,
+    XBox360_X                           = 155,
+    XBox360_Y                           = 156,
+    XBox360_LeftBumper                  = 157,
+    XBox360_RightBumper                 = 158,
+    XBox360_Start                       = 159,
+    XBox360_Back                        = 160,
+    XBox360_LeftTrigger_Pull            = 161,
+    XBox360_LeftTrigger_Click           = 162,
+    XBox360_RightTrigger_Pull           = 163,
+    XBox360_RightTrigger_Click          = 164,
+    XBox360_LeftStick_Move              = 165,
+    XBox360_LeftStick_Click             = 166,
+    XBox360_LeftStick_DPadNorth         = 167,
+    XBox360_LeftStick_DPadSouth         = 168,
+    XBox360_LeftStick_DPadWest          = 169,
+    XBox360_LeftStick_DPadEast          = 170,
+    XBox360_RightStick_Move             = 171,
+    XBox360_RightStick_Click            = 172,
+    XBox360_RightStick_DPadNorth        = 173,
+    XBox360_RightStick_DPadSouth        = 174,
+    XBox360_RightStick_DPadWest         = 175,
+    XBox360_RightStick_DPadEast         = 176,
+    XBox360_DPad_North                  = 177,
+    XBox360_DPad_South                  = 178,
+    XBox360_DPad_West                   = 179,
+    XBox360_DPad_East                   = 180,
+    XBox360_DPad_Move                   = 181,
+    XBox360_Reserved1                   = 182,
+    XBox360_Reserved2                   = 183,
+    XBox360_Reserved3                   = 184,
+    XBox360_Reserved4                   = 185,
+    XBox360_Reserved5                   = 186,
+    XBox360_Reserved6                   = 187,
+    XBox360_Reserved7                   = 188,
+    XBox360_Reserved8                   = 189,
+    XBox360_Reserved9                   = 190,
+    XBox360_Reserved10                  = 191,
+    Switch_A                            = 192,
+    Switch_B                            = 193,
+    Switch_X                            = 194,
+    Switch_Y                            = 195,
+    Switch_LeftBumper                   = 196,
+    Switch_RightBumper                  = 197,
+    Switch_Plus                         = 198,
+    Switch_Minus                        = 199,
+    Switch_Capture                      = 200,
+    Switch_LeftTrigger_Pull             = 201,
+    Switch_LeftTrigger_Click            = 202,
+    Switch_RightTrigger_Pull            = 203,
+    Switch_RightTrigger_Click           = 204,
+    Switch_LeftStick_Move               = 205,
+    Switch_LeftStick_Click              = 206,
+    Switch_LeftStick_DPadNorth          = 207,
+    Switch_LeftStick_DPadSouth          = 208,
+    Switch_LeftStick_DPadWest           = 209,
+    Switch_LeftStick_DPadEast           = 210,
+    Switch_RightStick_Move              = 211,
+    Switch_RightStick_Click             = 212,
+    Switch_RightStick_DPadNorth         = 213,
+    Switch_RightStick_DPadSouth         = 214,
+    Switch_RightStick_DPadWest          = 215,
+    Switch_RightStick_DPadEast          = 216,
+    Switch_DPad_North                   = 217,
+    Switch_DPad_South                   = 218,
+    Switch_DPad_West                    = 219,
+    Switch_DPad_East                    = 220,
+    Switch_ProGyro_Move                 = 221,
+    Switch_ProGyro_Pitch                = 222,
+    Switch_ProGyro_Yaw                  = 223,
+    Switch_ProGyro_Roll                 = 224,
+    Switch_DPad_Move                    = 225,
+    Switch_Reserved1                    = 226,
+    Switch_Reserved2                    = 227,
+    Switch_Reserved3                    = 228,
+    Switch_Reserved4                    = 229,
+    Switch_Reserved5                    = 230,
+    Switch_Reserved6                    = 231,
+    Switch_Reserved7                    = 232,
+    Switch_Reserved8                    = 233,
+    Switch_Reserved9                    = 234,
+    Switch_Reserved10                   = 235,
+    Switch_RightGyro_Move               = 236,
+    Switch_RightGyro_Pitch              = 237,
+    Switch_RightGyro_Yaw                = 238,
+    Switch_RightGyro_Roll               = 239,
+    Switch_LeftGyro_Move                = 240,
+    Switch_LeftGyro_Pitch               = 241,
+    Switch_LeftGyro_Yaw                 = 242,
+    Switch_LeftGyro_Roll                = 243,
+    Switch_LeftGrip_Lower               = 244,
+    Switch_LeftGrip_Upper               = 245,
+    Switch_RightGrip_Lower              = 246,
+    Switch_RightGrip_Upper              = 247,
+    Switch_JoyConButton_N               = 248,
+    Switch_JoyConButton_E               = 249,
+    Switch_JoyConButton_S               = 250,
+    Switch_JoyConButton_W               = 251,
+    Switch_Reserved15                   = 252,
+    Switch_Reserved16                   = 253,
+    Switch_Reserved17                   = 254,
+    Switch_Reserved18                   = 255,
+    Switch_Reserved19                   = 256,
+    Switch_Reserved20                   = 257,
+    PS5_X                               = 258,
+    PS5_Circle                          = 259,
+    PS5_Triangle                        = 260,
+    PS5_Square                          = 261,
+    PS5_LeftBumper                      = 262,
+    PS5_RightBumper                     = 263,
+    PS5_Option                          = 264,
+    PS5_Create                          = 265,
+    PS5_Mute                            = 266,
+    PS5_LeftPad_Touch                   = 267,
+    PS5_LeftPad_Swipe                   = 268,
+    PS5_LeftPad_Click                   = 269,
+    PS5_LeftPad_DPadNorth               = 270,
+    PS5_LeftPad_DPadSouth               = 271,
+    PS5_LeftPad_DPadWest                = 272,
+    PS5_LeftPad_DPadEast                = 273,
+    PS5_RightPad_Touch                  = 274,
+    PS5_RightPad_Swipe                  = 275,
+    PS5_RightPad_Click                  = 276,
+    PS5_RightPad_DPadNorth              = 277,
+    PS5_RightPad_DPadSouth              = 278,
+    PS5_RightPad_DPadWest               = 279,
+    PS5_RightPad_DPadEast               = 280,
+    PS5_CenterPad_Touch                 = 281,
+    PS5_CenterPad_Swipe                 = 282,
+    PS5_CenterPad_Click                 = 283,
+    PS5_CenterPad_DPadNorth             = 284,
+    PS5_CenterPad_DPadSouth             = 285,
+    PS5_CenterPad_DPadWest              = 286,
+    PS5_CenterPad_DPadEast              = 287,
+    PS5_LeftTrigger_Pull                = 288,
+    PS5_LeftTrigger_Click               = 289,
+    PS5_RightTrigger_Pull               = 290,
+    PS5_RightTrigger_Click              = 291,
+    PS5_LeftStick_Move                  = 292,
+    PS5_LeftStick_Click                 = 293,
+    PS5_LeftStick_DPadNorth             = 294,
+    PS5_LeftStick_DPadSouth             = 295,
+    PS5_LeftStick_DPadWest              = 296,
+    PS5_LeftStick_DPadEast              = 297,
+    PS5_RightStick_Move                 = 298,
+    PS5_RightStick_Click                = 299,
+    PS5_RightStick_DPadNorth            = 300,
+    PS5_RightStick_DPadSouth            = 301,
+    PS5_RightStick_DPadWest             = 302,
+    PS5_RightStick_DPadEast             = 303,
+    PS5_DPad_North                      = 304,
+    PS5_DPad_South                      = 305,
+    PS5_DPad_West                       = 306,
+    PS5_DPad_East                       = 307,
+    PS5_Gyro_Move                       = 308,
+    PS5_Gyro_Pitch                      = 309,
+    PS5_Gyro_Yaw                        = 310,
+    PS5_Gyro_Roll                       = 311,
+    PS5_DPad_Move                       = 312,
+    PS5_LeftGrip                        = 313,
+    PS5_RightGrip                       = 314,
+    PS5_LeftFn                          = 315,
+    PS5_RightFn                         = 316,
+    PS5_Reserved5                       = 317,
+    PS5_Reserved6                       = 318,
+    PS5_Reserved7                       = 319,
+    PS5_Reserved8                       = 320,
+    PS5_Reserved9                       = 321,
+    PS5_Reserved10                      = 322,
+    PS5_Reserved11                      = 323,
+    PS5_Reserved12                      = 324,
+    PS5_Reserved13                      = 325,
+    PS5_Reserved14                      = 326,
+    PS5_Reserved15                      = 327,
+    PS5_Reserved16                      = 328,
+    PS5_Reserved17                      = 329,
+    PS5_Reserved18                      = 330,
+    PS5_Reserved19                      = 331,
+    PS5_Reserved20                      = 332,
+    SteamDeck_A                         = 333,
+    SteamDeck_B                         = 334,
+    SteamDeck_X                         = 335,
+    SteamDeck_Y                         = 336,
+    SteamDeck_L1                        = 337,
+    SteamDeck_R1                        = 338,
+    SteamDeck_Menu                      = 339,
+    SteamDeck_View                      = 340,
+    SteamDeck_LeftPad_Touch             = 341,
+    SteamDeck_LeftPad_Swipe             = 342,
+    SteamDeck_LeftPad_Click             = 343,
+    SteamDeck_LeftPad_DPadNorth         = 344,
+    SteamDeck_LeftPad_DPadSouth         = 345,
+    SteamDeck_LeftPad_DPadWest          = 346,
+    SteamDeck_LeftPad_DPadEast          = 347,
+    SteamDeck_RightPad_Touch            = 348,
+    SteamDeck_RightPad_Swipe            = 349,
+    SteamDeck_RightPad_Click            = 350,
+    SteamDeck_RightPad_DPadNorth        = 351,
+    SteamDeck_RightPad_DPadSouth        = 352,
+    SteamDeck_RightPad_DPadWest         = 353,
+    SteamDeck_RightPad_DPadEast         = 354,
+    SteamDeck_L2_SoftPull               = 355,
+    SteamDeck_L2                        = 356,
+    SteamDeck_R2_SoftPull               = 357,
+    SteamDeck_R2                        = 358,
+    SteamDeck_LeftStick_Move            = 359,
+    SteamDeck_L3                        = 360,
+    SteamDeck_LeftStick_DPadNorth       = 361,
+    SteamDeck_LeftStick_DPadSouth       = 362,
+    SteamDeck_LeftStick_DPadWest        = 363,
+    SteamDeck_LeftStick_DPadEast        = 364,
+    SteamDeck_LeftStick_Touch           = 365,
+    SteamDeck_RightStick_Move           = 366,
+    SteamDeck_R3                        = 367,
+    SteamDeck_RightStick_DPadNorth      = 368,
+    SteamDeck_RightStick_DPadSouth      = 369,
+    SteamDeck_RightStick_DPadWest       = 370,
+    SteamDeck_RightStick_DPadEast       = 371,
+    SteamDeck_RightStick_Touch          = 372,
+    SteamDeck_L4                        = 373,
+    SteamDeck_R4                        = 374,
+    SteamDeck_L5                        = 375,
+    SteamDeck_R5                        = 376,
+    SteamDeck_DPad_Move                 = 377,
+    SteamDeck_DPad_North                = 378,
+    SteamDeck_DPad_South                = 379,
+    SteamDeck_DPad_West                 = 380,
+    SteamDeck_DPad_East                 = 381,
+    SteamDeck_Gyro_Move                 = 382,
+    SteamDeck_Gyro_Pitch                = 383,
+    SteamDeck_Gyro_Yaw                  = 384,
+    SteamDeck_Gyro_Roll                 = 385,
+    SteamDeck_Reserved1                 = 386,
+    SteamDeck_Reserved2                 = 387,
+    SteamDeck_Reserved3                 = 388,
+    SteamDeck_Reserved4                 = 389,
+    SteamDeck_Reserved5                 = 390,
+    SteamDeck_Reserved6                 = 391,
+    SteamDeck_Reserved7                 = 392,
+    SteamDeck_Reserved8                 = 393,
+    SteamDeck_Reserved9                 = 394,
+    SteamDeck_Reserved10                = 395,
+    SteamDeck_Reserved11                = 396,
+    SteamDeck_Reserved12                = 397,
+    SteamDeck_Reserved13                = 398,
+    SteamDeck_Reserved14                = 399,
+    SteamDeck_Reserved15                = 400,
+    SteamDeck_Reserved16                = 401,
+    SteamDeck_Reserved17                = 402,
+    SteamDeck_Reserved18                = 403,
+    SteamDeck_Reserved19                = 404,
+    SteamDeck_Reserved20                = 405,
+    Horipad_M1                          = 406,
+    Horipad_M2                          = 407,
+    Horipad_L4                          = 408,
+    Horipad_R4                          = 409,
+    LenovoLegionGo_A                    = 410,
+    LenovoLegionGo_B                    = 411,
+    LenovoLegionGo_X                    = 412,
+    LenovoLegionGo_Y                    = 413,
+    LenovoLegionGo_LB                   = 414,
+    LenovoLegionGo_RB                   = 415,
+    LenovoLegionGo_Menu                 = 416,
+    LenovoLegionGo_View                 = 417,
+    LenovoLegionGo_LeftPad_Touch        = 418,
+    LenovoLegionGo_LeftPad_Swipe        = 419,
+    LenovoLegionGo_LeftPad_Click        = 420,
+    LenovoLegionGo_LeftPad_DPadNorth    = 421,
+    LenovoLegionGo_LeftPad_DPadSouth    = 422,
+    LenovoLegionGo_LeftPad_DPadWest     = 423,
+    LenovoLegionGo_LeftPad_DPadEast     = 424,
+    LenovoLegionGo_RightPad_Touch       = 425,
+    LenovoLegionGo_RightPad_Swipe       = 426,
+    LenovoLegionGo_RightPad_Click       = 427,
+    LenovoLegionGo_RightPad_DPadNorth   = 428,
+    LenovoLegionGo_RightPad_DPadSouth   = 429,
+    LenovoLegionGo_RightPad_DPadWest    = 430,
+    LenovoLegionGo_RightPad_DPadEast    = 431,
+    LenovoLegionGo_LT_SoftPull          = 432,
+    LenovoLegionGo_LT                   = 433,
+    LenovoLegionGo_RT_SoftPull          = 434,
+    LenovoLegionGo_RT                   = 435,
+    LenovoLegionGo_LeftStick_Move       = 436,
+    LenovoLegionGo_LS                   = 437,
+    LenovoLegionGo_LeftStick_DPadNorth  = 438,
+    LenovoLegionGo_LeftStick_DPadSouth  = 439,
+    LenovoLegionGo_LeftStick_DPadWest   = 440,
+    LenovoLegionGo_LeftStick_DPadEast   = 441,
+    LenovoLegionGo_RightStick_Move      = 442,
+    LenovoLegionGo_RS                   = 443,
+    LenovoLegionGo_RightStick_DPadNorth = 444,
+    LenovoLegionGo_RightStick_DPadSouth = 445,
+    LenovoLegionGo_RightStick_DPadWest  = 446,
+    LenovoLegionGo_RightStick_DPadEast  = 447,
+    LenovoLegionGo_Y1                   = 448,
+    LenovoLegionGo_Y2                   = 449,
+    LenovoLegionGo_DPad_Move            = 450,
+    LenovoLegionGo_DPad_North           = 451,
+    LenovoLegionGo_DPad_South           = 452,
+    LenovoLegionGo_DPad_West            = 453,
+    LenovoLegionGo_DPad_East            = 454,
+    LenovoLegionGo_Gyro_Move            = 455,
+    LenovoLegionGo_Gyro_Pitch           = 456,
+    LenovoLegionGo_Gyro_Yaw             = 457,
+    LenovoLegionGo_Gyro_Roll            = 458,
+    LenovoLegionGo_Reserved1            = 459,
+    LenovoLegionGo_Reserved2            = 460,
+    LenovoLegionGo_Reserved3            = 461,
+    LenovoLegionGo_Reserved4            = 462,
+    LenovoLegionGo_Reserved5            = 463,
+    LenovoLegionGo_Reserved6            = 464,
+    LenovoLegionGo_Reserved7            = 465,
+    LenovoLegionGo_Reserved8            = 466,
+    LenovoLegionGo_Reserved9            = 467,
+    LenovoLegionGo_Reserved10           = 468,
+    LenovoLegionGo_Reserved11           = 469,
+    LenovoLegionGo_Reserved12           = 470,
+    LenovoLegionGo_Reserved13           = 471,
+    LenovoLegionGo_Reserved14           = 472,
+    LenovoLegionGo_Reserved15           = 473,
+    LenovoLegionGo_Reserved16           = 474,
+    LenovoLegionGo_Reserved17           = 475,
+    LenovoLegionGo_Reserved18           = 476,
+    LenovoLegionGo_Reserved19           = 477,
+    LenovoLegionGo_Reserved20           = 478,
+    Generic_L4                          = 479,
+    Generic_R4                          = 480,
+    Generic_L5                          = 481,
+    Generic_R5                          = 482,
+    Generic_PL                          = 483,
+    Generic_PR                          = 484,
+    Generic_C                           = 485,
+    Generic_Z                           = 486,
+    Generic_MISC1                       = 487,
+    Generic_MISC2                       = 488,
+    Generic_MISC3                       = 489,
+    Generic_MISC4                       = 490,
+    Generic_MISC5                       = 491,
+    Generic_MISC6                       = 492,
+    Generic_MISC7                       = 493,
+    Generic_MISC8                       = 494,
+    Count                               = 495,
+    MaximumPossibleValue                = 32767,
 }
 
 EXboxOrigin :: enum i32 {
@@ -2812,386 +2867,483 @@ ESteamInputActionEventType :: enum i32 {
 }
 
 EControllerActionOrigin :: enum i32 {
-    None                             = 0,
-    A                                = 1,
-    B                                = 2,
-    X                                = 3,
-    Y                                = 4,
-    LeftBumper                       = 5,
-    RightBumper                      = 6,
-    LeftGrip                         = 7,
-    RightGrip                        = 8,
-    Start                            = 9,
-    Back                             = 10,
-    LeftPad_Touch                    = 11,
-    LeftPad_Swipe                    = 12,
-    LeftPad_Click                    = 13,
-    LeftPad_DPadNorth                = 14,
-    LeftPad_DPadSouth                = 15,
-    LeftPad_DPadWest                 = 16,
-    LeftPad_DPadEast                 = 17,
-    RightPad_Touch                   = 18,
-    RightPad_Swipe                   = 19,
-    RightPad_Click                   = 20,
-    RightPad_DPadNorth               = 21,
-    RightPad_DPadSouth               = 22,
-    RightPad_DPadWest                = 23,
-    RightPad_DPadEast                = 24,
-    LeftTrigger_Pull                 = 25,
-    LeftTrigger_Click                = 26,
-    RightTrigger_Pull                = 27,
-    RightTrigger_Click               = 28,
-    LeftSticMove                     = 29,
-    LeftSticClick                    = 30,
-    LeftSticDPadNorth                = 31,
-    LeftSticDPadSouth                = 32,
-    LeftSticDPadWest                 = 33,
-    LeftSticDPadEast                 = 34,
-    Gyro_Move                        = 35,
-    Gyro_Pitch                       = 36,
-    Gyro_Yaw                         = 37,
-    Gyro_Roll                        = 38,
-    PS4_X                            = 39,
-    PS4_Circle                       = 40,
-    PS4_Triangle                     = 41,
-    PS4_Square                       = 42,
-    PS4_LeftBumper                   = 43,
-    PS4_RightBumper                  = 44,
-    PS4_Options                      = 45,
-    PS4_Share                        = 46,
-    PS4_LeftPad_Touch                = 47,
-    PS4_LeftPad_Swipe                = 48,
-    PS4_LeftPad_Click                = 49,
-    PS4_LeftPad_DPadNorth            = 50,
-    PS4_LeftPad_DPadSouth            = 51,
-    PS4_LeftPad_DPadWest             = 52,
-    PS4_LeftPad_DPadEast             = 53,
-    PS4_RightPad_Touch               = 54,
-    PS4_RightPad_Swipe               = 55,
-    PS4_RightPad_Click               = 56,
-    PS4_RightPad_DPadNorth           = 57,
-    PS4_RightPad_DPadSouth           = 58,
-    PS4_RightPad_DPadWest            = 59,
-    PS4_RightPad_DPadEast            = 60,
-    PS4_CenterPad_Touch              = 61,
-    PS4_CenterPad_Swipe              = 62,
-    PS4_CenterPad_Click              = 63,
-    PS4_CenterPad_DPadNorth          = 64,
-    PS4_CenterPad_DPadSouth          = 65,
-    PS4_CenterPad_DPadWest           = 66,
-    PS4_CenterPad_DPadEast           = 67,
-    PS4_LeftTrigger_Pull             = 68,
-    PS4_LeftTrigger_Click            = 69,
-    PS4_RightTrigger_Pull            = 70,
-    PS4_RightTrigger_Click           = 71,
-    PS4_LeftSticMove                 = 72,
-    PS4_LeftSticClick                = 73,
-    PS4_LeftSticDPadNorth            = 74,
-    PS4_LeftSticDPadSouth            = 75,
-    PS4_LeftSticDPadWest             = 76,
-    PS4_LeftSticDPadEast             = 77,
-    PS4_RightSticMove                = 78,
-    PS4_RightSticClick               = 79,
-    PS4_RightSticDPadNorth           = 80,
-    PS4_RightSticDPadSouth           = 81,
-    PS4_RightSticDPadWest            = 82,
-    PS4_RightSticDPadEast            = 83,
-    PS4_DPad_North                   = 84,
-    PS4_DPad_South                   = 85,
-    PS4_DPad_West                    = 86,
-    PS4_DPad_East                    = 87,
-    PS4_Gyro_Move                    = 88,
-    PS4_Gyro_Pitch                   = 89,
-    PS4_Gyro_Yaw                     = 90,
-    PS4_Gyro_Roll                    = 91,
-    XBoxOne_A                        = 92,
-    XBoxOne_B                        = 93,
-    XBoxOne_X                        = 94,
-    XBoxOne_Y                        = 95,
-    XBoxOne_LeftBumper               = 96,
-    XBoxOne_RightBumper              = 97,
-    XBoxOne_Menu                     = 98,
-    XBoxOne_View                     = 99,
-    XBoxOne_LeftTrigger_Pull         = 100,
-    XBoxOne_LeftTrigger_Click        = 101,
-    XBoxOne_RightTrigger_Pull        = 102,
-    XBoxOne_RightTrigger_Click       = 103,
-    XBoxOne_LeftSticMove             = 104,
-    XBoxOne_LeftSticClick            = 105,
-    XBoxOne_LeftSticDPadNorth        = 106,
-    XBoxOne_LeftSticDPadSouth        = 107,
-    XBoxOne_LeftSticDPadWest         = 108,
-    XBoxOne_LeftSticDPadEast         = 109,
-    XBoxOne_RightSticMove            = 110,
-    XBoxOne_RightSticClick           = 111,
-    XBoxOne_RightSticDPadNorth       = 112,
-    XBoxOne_RightSticDPadSouth       = 113,
-    XBoxOne_RightSticDPadWest        = 114,
-    XBoxOne_RightSticDPadEast        = 115,
-    XBoxOne_DPad_North               = 116,
-    XBoxOne_DPad_South               = 117,
-    XBoxOne_DPad_West                = 118,
-    XBoxOne_DPad_East                = 119,
-    XBox360_A                        = 120,
-    XBox360_B                        = 121,
-    XBox360_X                        = 122,
-    XBox360_Y                        = 123,
-    XBox360_LeftBumper               = 124,
-    XBox360_RightBumper              = 125,
-    XBox360_Start                    = 126,
-    XBox360_Back                     = 127,
-    XBox360_LeftTrigger_Pull         = 128,
-    XBox360_LeftTrigger_Click        = 129,
-    XBox360_RightTrigger_Pull        = 130,
-    XBox360_RightTrigger_Click       = 131,
-    XBox360_LeftSticMove             = 132,
-    XBox360_LeftSticClick            = 133,
-    XBox360_LeftSticDPadNorth        = 134,
-    XBox360_LeftSticDPadSouth        = 135,
-    XBox360_LeftSticDPadWest         = 136,
-    XBox360_LeftSticDPadEast         = 137,
-    XBox360_RightSticMove            = 138,
-    XBox360_RightSticClick           = 139,
-    XBox360_RightSticDPadNorth       = 140,
-    XBox360_RightSticDPadSouth       = 141,
-    XBox360_RightSticDPadWest        = 142,
-    XBox360_RightSticDPadEast        = 143,
-    XBox360_DPad_North               = 144,
-    XBox360_DPad_South               = 145,
-    XBox360_DPad_West                = 146,
-    XBox360_DPad_East                = 147,
-    SteamV2_A                        = 148,
-    SteamV2_B                        = 149,
-    SteamV2_X                        = 150,
-    SteamV2_Y                        = 151,
-    SteamV2_LeftBumper               = 152,
-    SteamV2_RightBumper              = 153,
-    SteamV2_LeftGrip_Lower           = 154,
-    SteamV2_LeftGrip_Upper           = 155,
-    SteamV2_RightGrip_Lower          = 156,
-    SteamV2_RightGrip_Upper          = 157,
-    SteamV2_LeftBumper_Pressure      = 158,
-    SteamV2_RightBumper_Pressure     = 159,
-    SteamV2_LeftGrip_Pressure        = 160,
-    SteamV2_RightGrip_Pressure       = 161,
-    SteamV2_LeftGrip_Upper_Pressure  = 162,
-    SteamV2_RightGrip_Upper_Pressure = 163,
-    SteamV2_Start                    = 164,
-    SteamV2_Back                     = 165,
-    SteamV2_LeftPad_Touch            = 166,
-    SteamV2_LeftPad_Swipe            = 167,
-    SteamV2_LeftPad_Click            = 168,
-    SteamV2_LeftPad_Pressure         = 169,
-    SteamV2_LeftPad_DPadNorth        = 170,
-    SteamV2_LeftPad_DPadSouth        = 171,
-    SteamV2_LeftPad_DPadWest         = 172,
-    SteamV2_LeftPad_DPadEast         = 173,
-    SteamV2_RightPad_Touch           = 174,
-    SteamV2_RightPad_Swipe           = 175,
-    SteamV2_RightPad_Click           = 176,
-    SteamV2_RightPad_Pressure        = 177,
-    SteamV2_RightPad_DPadNorth       = 178,
-    SteamV2_RightPad_DPadSouth       = 179,
-    SteamV2_RightPad_DPadWest        = 180,
-    SteamV2_RightPad_DPadEast        = 181,
-    SteamV2_LeftTrigger_Pull         = 182,
-    SteamV2_LeftTrigger_Click        = 183,
-    SteamV2_RightTrigger_Pull        = 184,
-    SteamV2_RightTrigger_Click       = 185,
-    SteamV2_LeftSticMove             = 186,
-    SteamV2_LeftSticClick            = 187,
-    SteamV2_LeftSticDPadNorth        = 188,
-    SteamV2_LeftSticDPadSouth        = 189,
-    SteamV2_LeftSticDPadWest         = 190,
-    SteamV2_LeftSticDPadEast         = 191,
-    SteamV2_Gyro_Move                = 192,
-    SteamV2_Gyro_Pitch               = 193,
-    SteamV2_Gyro_Yaw                 = 194,
-    SteamV2_Gyro_Roll                = 195,
-    Switch_A                         = 196,
-    Switch_B                         = 197,
-    Switch_X                         = 198,
-    Switch_Y                         = 199,
-    Switch_LeftBumper                = 200,
-    Switch_RightBumper               = 201,
-    Switch_Plus                      = 202,
-    Switch_Minus                     = 203,
-    Switch_Capture                   = 204,
-    Switch_LeftTrigger_Pull          = 205,
-    Switch_LeftTrigger_Click         = 206,
-    Switch_RightTrigger_Pull         = 207,
-    Switch_RightTrigger_Click        = 208,
-    Switch_LeftSticMove              = 209,
-    Switch_LeftSticClick             = 210,
-    Switch_LeftSticDPadNorth         = 211,
-    Switch_LeftSticDPadSouth         = 212,
-    Switch_LeftSticDPadWest          = 213,
-    Switch_LeftSticDPadEast          = 214,
-    Switch_RightSticMove             = 215,
-    Switch_RightSticClick            = 216,
-    Switch_RightSticDPadNorth        = 217,
-    Switch_RightSticDPadSouth        = 218,
-    Switch_RightSticDPadWest         = 219,
-    Switch_RightSticDPadEast         = 220,
-    Switch_DPad_North                = 221,
-    Switch_DPad_South                = 222,
-    Switch_DPad_West                 = 223,
-    Switch_DPad_East                 = 224,
-    Switch_ProGyro_Move              = 225,
-    Switch_ProGyro_Pitch             = 226,
-    Switch_ProGyro_Yaw               = 227,
-    Switch_ProGyro_Roll              = 228,
-    Switch_RightGyro_Move            = 229,
-    Switch_RightGyro_Pitch           = 230,
-    Switch_RightGyro_Yaw             = 231,
-    Switch_RightGyro_Roll            = 232,
-    Switch_LeftGyro_Move             = 233,
-    Switch_LeftGyro_Pitch            = 234,
-    Switch_LeftGyro_Yaw              = 235,
-    Switch_LeftGyro_Roll             = 236,
-    Switch_LeftGrip_Lower            = 237,
-    Switch_LeftGrip_Upper            = 238,
-    Switch_RightGrip_Lower           = 239,
-    Switch_RightGrip_Upper           = 240,
-    PS4_DPad_Move                    = 241,
-    XBoxOne_DPad_Move                = 242,
-    XBox360_DPad_Move                = 243,
-    Switch_DPad_Move                 = 244,
-    PS5_X                            = 245,
-    PS5_Circle                       = 246,
-    PS5_Triangle                     = 247,
-    PS5_Square                       = 248,
-    PS5_LeftBumper                   = 249,
-    PS5_RightBumper                  = 250,
-    PS5_Option                       = 251,
-    PS5_Create                       = 252,
-    PS5_Mute                         = 253,
-    PS5_LeftPad_Touch                = 254,
-    PS5_LeftPad_Swipe                = 255,
-    PS5_LeftPad_Click                = 256,
-    PS5_LeftPad_DPadNorth            = 257,
-    PS5_LeftPad_DPadSouth            = 258,
-    PS5_LeftPad_DPadWest             = 259,
-    PS5_LeftPad_DPadEast             = 260,
-    PS5_RightPad_Touch               = 261,
-    PS5_RightPad_Swipe               = 262,
-    PS5_RightPad_Click               = 263,
-    PS5_RightPad_DPadNorth           = 264,
-    PS5_RightPad_DPadSouth           = 265,
-    PS5_RightPad_DPadWest            = 266,
-    PS5_RightPad_DPadEast            = 267,
-    PS5_CenterPad_Touch              = 268,
-    PS5_CenterPad_Swipe              = 269,
-    PS5_CenterPad_Click              = 270,
-    PS5_CenterPad_DPadNorth          = 271,
-    PS5_CenterPad_DPadSouth          = 272,
-    PS5_CenterPad_DPadWest           = 273,
-    PS5_CenterPad_DPadEast           = 274,
-    PS5_LeftTrigger_Pull             = 275,
-    PS5_LeftTrigger_Click            = 276,
-    PS5_RightTrigger_Pull            = 277,
-    PS5_RightTrigger_Click           = 278,
-    PS5_LeftSticMove                 = 279,
-    PS5_LeftSticClick                = 280,
-    PS5_LeftSticDPadNorth            = 281,
-    PS5_LeftSticDPadSouth            = 282,
-    PS5_LeftSticDPadWest             = 283,
-    PS5_LeftSticDPadEast             = 284,
-    PS5_RightSticMove                = 285,
-    PS5_RightSticClick               = 286,
-    PS5_RightSticDPadNorth           = 287,
-    PS5_RightSticDPadSouth           = 288,
-    PS5_RightSticDPadWest            = 289,
-    PS5_RightSticDPadEast            = 290,
-    PS5_DPad_Move                    = 291,
-    PS5_DPad_North                   = 292,
-    PS5_DPad_South                   = 293,
-    PS5_DPad_West                    = 294,
-    PS5_DPad_East                    = 295,
-    PS5_Gyro_Move                    = 296,
-    PS5_Gyro_Pitch                   = 297,
-    PS5_Gyro_Yaw                     = 298,
-    PS5_Gyro_Roll                    = 299,
-    XBoxOne_LeftGrip_Lower           = 300,
-    XBoxOne_LeftGrip_Upper           = 301,
-    XBoxOne_RightGrip_Lower          = 302,
-    XBoxOne_RightGrip_Upper          = 303,
-    XBoxOne_Share                    = 304,
-    SteamDecA                        = 305,
-    SteamDecB                        = 306,
-    SteamDecX                        = 307,
-    SteamDecY                        = 308,
-    SteamDecL1                       = 309,
-    SteamDecR1                       = 310,
-    SteamDecMenu                     = 311,
-    SteamDecView                     = 312,
-    SteamDecLeftPad_Touch            = 313,
-    SteamDecLeftPad_Swipe            = 314,
-    SteamDecLeftPad_Click            = 315,
-    SteamDecLeftPad_DPadNorth        = 316,
-    SteamDecLeftPad_DPadSouth        = 317,
-    SteamDecLeftPad_DPadWest         = 318,
-    SteamDecLeftPad_DPadEast         = 319,
-    SteamDecRightPad_Touch           = 320,
-    SteamDecRightPad_Swipe           = 321,
-    SteamDecRightPad_Click           = 322,
-    SteamDecRightPad_DPadNorth       = 323,
-    SteamDecRightPad_DPadSouth       = 324,
-    SteamDecRightPad_DPadWest        = 325,
-    SteamDecRightPad_DPadEast        = 326,
-    SteamDecL2_SoftPull              = 327,
-    SteamDecL2                       = 328,
-    SteamDecR2_SoftPull              = 329,
-    SteamDecR2                       = 330,
-    SteamDecLeftSticMove             = 331,
-    SteamDecL3                       = 332,
-    SteamDecLeftSticDPadNorth        = 333,
-    SteamDecLeftSticDPadSouth        = 334,
-    SteamDecLeftSticDPadWest         = 335,
-    SteamDecLeftSticDPadEast         = 336,
-    SteamDecLeftSticTouch            = 337,
-    SteamDecRightSticMove            = 338,
-    SteamDecR3                       = 339,
-    SteamDecRightSticDPadNorth       = 340,
-    SteamDecRightSticDPadSouth       = 341,
-    SteamDecRightSticDPadWest        = 342,
-    SteamDecRightSticDPadEast        = 343,
-    SteamDecRightSticTouch           = 344,
-    SteamDecL4                       = 345,
-    SteamDecR4                       = 346,
-    SteamDecL5                       = 347,
-    SteamDecR5                       = 348,
-    SteamDecDPad_Move                = 349,
-    SteamDecDPad_North               = 350,
-    SteamDecDPad_South               = 351,
-    SteamDecDPad_West                = 352,
-    SteamDecDPad_East                = 353,
-    SteamDecGyro_Move                = 354,
-    SteamDecGyro_Pitch               = 355,
-    SteamDecGyro_Yaw                 = 356,
-    SteamDecGyro_Roll                = 357,
-    SteamDecReserved1                = 358,
-    SteamDecReserved2                = 359,
-    SteamDecReserved3                = 360,
-    SteamDecReserved4                = 361,
-    SteamDecReserved5                = 362,
-    SteamDecReserved6                = 363,
-    SteamDecReserved7                = 364,
-    SteamDecReserved8                = 365,
-    SteamDecReserved9                = 366,
-    SteamDecReserved10               = 367,
-    SteamDecReserved11               = 368,
-    SteamDecReserved12               = 369,
-    SteamDecReserved13               = 370,
-    SteamDecReserved14               = 371,
-    SteamDecReserved15               = 372,
-    SteamDecReserved16               = 373,
-    SteamDecReserved17               = 374,
-    SteamDecReserved18               = 375,
-    SteamDecReserved19               = 376,
-    SteamDecReserved20               = 377,
-    Count                            = 378,
-    MaximumPossibleValue             = 32767,
+    None                                = 0,
+    A                                   = 1,
+    B                                   = 2,
+    X                                   = 3,
+    Y                                   = 4,
+    LeftBumper                          = 5,
+    RightBumper                         = 6,
+    LeftGrip                            = 7,
+    RightGrip                           = 8,
+    Start                               = 9,
+    Back                                = 10,
+    LeftPad_Touch                       = 11,
+    LeftPad_Swipe                       = 12,
+    LeftPad_Click                       = 13,
+    LeftPad_DPadNorth                   = 14,
+    LeftPad_DPadSouth                   = 15,
+    LeftPad_DPadWest                    = 16,
+    LeftPad_DPadEast                    = 17,
+    RightPad_Touch                      = 18,
+    RightPad_Swipe                      = 19,
+    RightPad_Click                      = 20,
+    RightPad_DPadNorth                  = 21,
+    RightPad_DPadSouth                  = 22,
+    RightPad_DPadWest                   = 23,
+    RightPad_DPadEast                   = 24,
+    LeftTrigger_Pull                    = 25,
+    LeftTrigger_Click                   = 26,
+    RightTrigger_Pull                   = 27,
+    RightTrigger_Click                  = 28,
+    LeftStick_Move                      = 29,
+    LeftStick_Click                     = 30,
+    LeftStick_DPadNorth                 = 31,
+    LeftStick_DPadSouth                 = 32,
+    LeftStick_DPadWest                  = 33,
+    LeftStick_DPadEast                  = 34,
+    Gyro_Move                           = 35,
+    Gyro_Pitch                          = 36,
+    Gyro_Yaw                            = 37,
+    Gyro_Roll                           = 38,
+    PS4_X                               = 39,
+    PS4_Circle                          = 40,
+    PS4_Triangle                        = 41,
+    PS4_Square                          = 42,
+    PS4_LeftBumper                      = 43,
+    PS4_RightBumper                     = 44,
+    PS4_Options                         = 45,
+    PS4_Share                           = 46,
+    PS4_LeftPad_Touch                   = 47,
+    PS4_LeftPad_Swipe                   = 48,
+    PS4_LeftPad_Click                   = 49,
+    PS4_LeftPad_DPadNorth               = 50,
+    PS4_LeftPad_DPadSouth               = 51,
+    PS4_LeftPad_DPadWest                = 52,
+    PS4_LeftPad_DPadEast                = 53,
+    PS4_RightPad_Touch                  = 54,
+    PS4_RightPad_Swipe                  = 55,
+    PS4_RightPad_Click                  = 56,
+    PS4_RightPad_DPadNorth              = 57,
+    PS4_RightPad_DPadSouth              = 58,
+    PS4_RightPad_DPadWest               = 59,
+    PS4_RightPad_DPadEast               = 60,
+    PS4_CenterPad_Touch                 = 61,
+    PS4_CenterPad_Swipe                 = 62,
+    PS4_CenterPad_Click                 = 63,
+    PS4_CenterPad_DPadNorth             = 64,
+    PS4_CenterPad_DPadSouth             = 65,
+    PS4_CenterPad_DPadWest              = 66,
+    PS4_CenterPad_DPadEast              = 67,
+    PS4_LeftTrigger_Pull                = 68,
+    PS4_LeftTrigger_Click               = 69,
+    PS4_RightTrigger_Pull               = 70,
+    PS4_RightTrigger_Click              = 71,
+    PS4_LeftStick_Move                  = 72,
+    PS4_LeftStick_Click                 = 73,
+    PS4_LeftStick_DPadNorth             = 74,
+    PS4_LeftStick_DPadSouth             = 75,
+    PS4_LeftStick_DPadWest              = 76,
+    PS4_LeftStick_DPadEast              = 77,
+    PS4_RightStick_Move                 = 78,
+    PS4_RightStick_Click                = 79,
+    PS4_RightStick_DPadNorth            = 80,
+    PS4_RightStick_DPadSouth            = 81,
+    PS4_RightStick_DPadWest             = 82,
+    PS4_RightStick_DPadEast             = 83,
+    PS4_DPad_North                      = 84,
+    PS4_DPad_South                      = 85,
+    PS4_DPad_West                       = 86,
+    PS4_DPad_East                       = 87,
+    PS4_Gyro_Move                       = 88,
+    PS4_Gyro_Pitch                      = 89,
+    PS4_Gyro_Yaw                        = 90,
+    PS4_Gyro_Roll                       = 91,
+    XBoxOne_A                           = 92,
+    XBoxOne_B                           = 93,
+    XBoxOne_X                           = 94,
+    XBoxOne_Y                           = 95,
+    XBoxOne_LeftBumper                  = 96,
+    XBoxOne_RightBumper                 = 97,
+    XBoxOne_Menu                        = 98,
+    XBoxOne_View                        = 99,
+    XBoxOne_LeftTrigger_Pull            = 100,
+    XBoxOne_LeftTrigger_Click           = 101,
+    XBoxOne_RightTrigger_Pull           = 102,
+    XBoxOne_RightTrigger_Click          = 103,
+    XBoxOne_LeftStick_Move              = 104,
+    XBoxOne_LeftStick_Click             = 105,
+    XBoxOne_LeftStick_DPadNorth         = 106,
+    XBoxOne_LeftStick_DPadSouth         = 107,
+    XBoxOne_LeftStick_DPadWest          = 108,
+    XBoxOne_LeftStick_DPadEast          = 109,
+    XBoxOne_RightStick_Move             = 110,
+    XBoxOne_RightStick_Click            = 111,
+    XBoxOne_RightStick_DPadNorth        = 112,
+    XBoxOne_RightStick_DPadSouth        = 113,
+    XBoxOne_RightStick_DPadWest         = 114,
+    XBoxOne_RightStick_DPadEast         = 115,
+    XBoxOne_DPad_North                  = 116,
+    XBoxOne_DPad_South                  = 117,
+    XBoxOne_DPad_West                   = 118,
+    XBoxOne_DPad_East                   = 119,
+    XBox360_A                           = 120,
+    XBox360_B                           = 121,
+    XBox360_X                           = 122,
+    XBox360_Y                           = 123,
+    XBox360_LeftBumper                  = 124,
+    XBox360_RightBumper                 = 125,
+    XBox360_Start                       = 126,
+    XBox360_Back                        = 127,
+    XBox360_LeftTrigger_Pull            = 128,
+    XBox360_LeftTrigger_Click           = 129,
+    XBox360_RightTrigger_Pull           = 130,
+    XBox360_RightTrigger_Click          = 131,
+    XBox360_LeftStick_Move              = 132,
+    XBox360_LeftStick_Click             = 133,
+    XBox360_LeftStick_DPadNorth         = 134,
+    XBox360_LeftStick_DPadSouth         = 135,
+    XBox360_LeftStick_DPadWest          = 136,
+    XBox360_LeftStick_DPadEast          = 137,
+    XBox360_RightStick_Move             = 138,
+    XBox360_RightStick_Click            = 139,
+    XBox360_RightStick_DPadNorth        = 140,
+    XBox360_RightStick_DPadSouth        = 141,
+    XBox360_RightStick_DPadWest         = 142,
+    XBox360_RightStick_DPadEast         = 143,
+    XBox360_DPad_North                  = 144,
+    XBox360_DPad_South                  = 145,
+    XBox360_DPad_West                   = 146,
+    XBox360_DPad_East                   = 147,
+    SteamV2_A                           = 148,
+    SteamV2_B                           = 149,
+    SteamV2_X                           = 150,
+    SteamV2_Y                           = 151,
+    SteamV2_LeftBumper                  = 152,
+    SteamV2_RightBumper                 = 153,
+    SteamV2_LeftGrip_Lower              = 154,
+    SteamV2_LeftGrip_Upper              = 155,
+    SteamV2_RightGrip_Lower             = 156,
+    SteamV2_RightGrip_Upper             = 157,
+    SteamV2_LeftBumper_Pressure         = 158,
+    SteamV2_RightBumper_Pressure        = 159,
+    SteamV2_LeftGrip_Pressure           = 160,
+    SteamV2_RightGrip_Pressure          = 161,
+    SteamV2_LeftGrip_Upper_Pressure     = 162,
+    SteamV2_RightGrip_Upper_Pressure    = 163,
+    SteamV2_Start                       = 164,
+    SteamV2_Back                        = 165,
+    SteamV2_LeftPad_Touch               = 166,
+    SteamV2_LeftPad_Swipe               = 167,
+    SteamV2_LeftPad_Click               = 168,
+    SteamV2_LeftPad_Pressure            = 169,
+    SteamV2_LeftPad_DPadNorth           = 170,
+    SteamV2_LeftPad_DPadSouth           = 171,
+    SteamV2_LeftPad_DPadWest            = 172,
+    SteamV2_LeftPad_DPadEast            = 173,
+    SteamV2_RightPad_Touch              = 174,
+    SteamV2_RightPad_Swipe              = 175,
+    SteamV2_RightPad_Click              = 176,
+    SteamV2_RightPad_Pressure           = 177,
+    SteamV2_RightPad_DPadNorth          = 178,
+    SteamV2_RightPad_DPadSouth          = 179,
+    SteamV2_RightPad_DPadWest           = 180,
+    SteamV2_RightPad_DPadEast           = 181,
+    SteamV2_LeftTrigger_Pull            = 182,
+    SteamV2_LeftTrigger_Click           = 183,
+    SteamV2_RightTrigger_Pull           = 184,
+    SteamV2_RightTrigger_Click          = 185,
+    SteamV2_LeftStick_Move              = 186,
+    SteamV2_LeftStick_Click             = 187,
+    SteamV2_LeftStick_DPadNorth         = 188,
+    SteamV2_LeftStick_DPadSouth         = 189,
+    SteamV2_LeftStick_DPadWest          = 190,
+    SteamV2_LeftStick_DPadEast          = 191,
+    SteamV2_Gyro_Move                   = 192,
+    SteamV2_Gyro_Pitch                  = 193,
+    SteamV2_Gyro_Yaw                    = 194,
+    SteamV2_Gyro_Roll                   = 195,
+    Switch_A                            = 196,
+    Switch_B                            = 197,
+    Switch_X                            = 198,
+    Switch_Y                            = 199,
+    Switch_LeftBumper                   = 200,
+    Switch_RightBumper                  = 201,
+    Switch_Plus                         = 202,
+    Switch_Minus                        = 203,
+    Switch_Capture                      = 204,
+    Switch_LeftTrigger_Pull             = 205,
+    Switch_LeftTrigger_Click            = 206,
+    Switch_RightTrigger_Pull            = 207,
+    Switch_RightTrigger_Click           = 208,
+    Switch_LeftStick_Move               = 209,
+    Switch_LeftStick_Click              = 210,
+    Switch_LeftStick_DPadNorth          = 211,
+    Switch_LeftStick_DPadSouth          = 212,
+    Switch_LeftStick_DPadWest           = 213,
+    Switch_LeftStick_DPadEast           = 214,
+    Switch_RightStick_Move              = 215,
+    Switch_RightStick_Click             = 216,
+    Switch_RightStick_DPadNorth         = 217,
+    Switch_RightStick_DPadSouth         = 218,
+    Switch_RightStick_DPadWest          = 219,
+    Switch_RightStick_DPadEast          = 220,
+    Switch_DPad_North                   = 221,
+    Switch_DPad_South                   = 222,
+    Switch_DPad_West                    = 223,
+    Switch_DPad_East                    = 224,
+    Switch_ProGyro_Move                 = 225,
+    Switch_ProGyro_Pitch                = 226,
+    Switch_ProGyro_Yaw                  = 227,
+    Switch_ProGyro_Roll                 = 228,
+    Switch_RightGyro_Move               = 229,
+    Switch_RightGyro_Pitch              = 230,
+    Switch_RightGyro_Yaw                = 231,
+    Switch_RightGyro_Roll               = 232,
+    Switch_LeftGyro_Move                = 233,
+    Switch_LeftGyro_Pitch               = 234,
+    Switch_LeftGyro_Yaw                 = 235,
+    Switch_LeftGyro_Roll                = 236,
+    Switch_LeftGrip_Lower               = 237,
+    Switch_LeftGrip_Upper               = 238,
+    Switch_RightGrip_Lower              = 239,
+    Switch_RightGrip_Upper              = 240,
+    PS4_DPad_Move                       = 241,
+    XBoxOne_DPad_Move                   = 242,
+    XBox360_DPad_Move                   = 243,
+    Switch_DPad_Move                    = 244,
+    PS5_X                               = 245,
+    PS5_Circle                          = 246,
+    PS5_Triangle                        = 247,
+    PS5_Square                          = 248,
+    PS5_LeftBumper                      = 249,
+    PS5_RightBumper                     = 250,
+    PS5_Option                          = 251,
+    PS5_Create                          = 252,
+    PS5_Mute                            = 253,
+    PS5_LeftPad_Touch                   = 254,
+    PS5_LeftPad_Swipe                   = 255,
+    PS5_LeftPad_Click                   = 256,
+    PS5_LeftPad_DPadNorth               = 257,
+    PS5_LeftPad_DPadSouth               = 258,
+    PS5_LeftPad_DPadWest                = 259,
+    PS5_LeftPad_DPadEast                = 260,
+    PS5_RightPad_Touch                  = 261,
+    PS5_RightPad_Swipe                  = 262,
+    PS5_RightPad_Click                  = 263,
+    PS5_RightPad_DPadNorth              = 264,
+    PS5_RightPad_DPadSouth              = 265,
+    PS5_RightPad_DPadWest               = 266,
+    PS5_RightPad_DPadEast               = 267,
+    PS5_CenterPad_Touch                 = 268,
+    PS5_CenterPad_Swipe                 = 269,
+    PS5_CenterPad_Click                 = 270,
+    PS5_CenterPad_DPadNorth             = 271,
+    PS5_CenterPad_DPadSouth             = 272,
+    PS5_CenterPad_DPadWest              = 273,
+    PS5_CenterPad_DPadEast              = 274,
+    PS5_LeftTrigger_Pull                = 275,
+    PS5_LeftTrigger_Click               = 276,
+    PS5_RightTrigger_Pull               = 277,
+    PS5_RightTrigger_Click              = 278,
+    PS5_LeftStick_Move                  = 279,
+    PS5_LeftStick_Click                 = 280,
+    PS5_LeftStick_DPadNorth             = 281,
+    PS5_LeftStick_DPadSouth             = 282,
+    PS5_LeftStick_DPadWest              = 283,
+    PS5_LeftStick_DPadEast              = 284,
+    PS5_RightStick_Move                 = 285,
+    PS5_RightStick_Click                = 286,
+    PS5_RightStick_DPadNorth            = 287,
+    PS5_RightStick_DPadSouth            = 288,
+    PS5_RightStick_DPadWest             = 289,
+    PS5_RightStick_DPadEast             = 290,
+    PS5_DPad_Move                       = 291,
+    PS5_DPad_North                      = 292,
+    PS5_DPad_South                      = 293,
+    PS5_DPad_West                       = 294,
+    PS5_DPad_East                       = 295,
+    PS5_Gyro_Move                       = 296,
+    PS5_Gyro_Pitch                      = 297,
+    PS5_Gyro_Yaw                        = 298,
+    PS5_Gyro_Roll                       = 299,
+    XBoxOne_LeftGrip_Lower              = 300,
+    XBoxOne_LeftGrip_Upper              = 301,
+    XBoxOne_RightGrip_Lower             = 302,
+    XBoxOne_RightGrip_Upper             = 303,
+    XBoxOne_Share                       = 304,
+    SteamDeck_A                         = 305,
+    SteamDeck_B                         = 306,
+    SteamDeck_X                         = 307,
+    SteamDeck_Y                         = 308,
+    SteamDeck_L1                        = 309,
+    SteamDeck_R1                        = 310,
+    SteamDeck_Menu                      = 311,
+    SteamDeck_View                      = 312,
+    SteamDeck_LeftPad_Touch             = 313,
+    SteamDeck_LeftPad_Swipe             = 314,
+    SteamDeck_LeftPad_Click             = 315,
+    SteamDeck_LeftPad_DPadNorth         = 316,
+    SteamDeck_LeftPad_DPadSouth         = 317,
+    SteamDeck_LeftPad_DPadWest          = 318,
+    SteamDeck_LeftPad_DPadEast          = 319,
+    SteamDeck_RightPad_Touch            = 320,
+    SteamDeck_RightPad_Swipe            = 321,
+    SteamDeck_RightPad_Click            = 322,
+    SteamDeck_RightPad_DPadNorth        = 323,
+    SteamDeck_RightPad_DPadSouth        = 324,
+    SteamDeck_RightPad_DPadWest         = 325,
+    SteamDeck_RightPad_DPadEast         = 326,
+    SteamDeck_L2_SoftPull               = 327,
+    SteamDeck_L2                        = 328,
+    SteamDeck_R2_SoftPull               = 329,
+    SteamDeck_R2                        = 330,
+    SteamDeck_LeftStick_Move            = 331,
+    SteamDeck_L3                        = 332,
+    SteamDeck_LeftStick_DPadNorth       = 333,
+    SteamDeck_LeftStick_DPadSouth       = 334,
+    SteamDeck_LeftStick_DPadWest        = 335,
+    SteamDeck_LeftStick_DPadEast        = 336,
+    SteamDeck_LeftStick_Touch           = 337,
+    SteamDeck_RightStick_Move           = 338,
+    SteamDeck_R3                        = 339,
+    SteamDeck_RightStick_DPadNorth      = 340,
+    SteamDeck_RightStick_DPadSouth      = 341,
+    SteamDeck_RightStick_DPadWest       = 342,
+    SteamDeck_RightStick_DPadEast       = 343,
+    SteamDeck_RightStick_Touch          = 344,
+    SteamDeck_L4                        = 345,
+    SteamDeck_R4                        = 346,
+    SteamDeck_L5                        = 347,
+    SteamDeck_R5                        = 348,
+    SteamDeck_DPad_Move                 = 349,
+    SteamDeck_DPad_North                = 350,
+    SteamDeck_DPad_South                = 351,
+    SteamDeck_DPad_West                 = 352,
+    SteamDeck_DPad_East                 = 353,
+    SteamDeck_Gyro_Move                 = 354,
+    SteamDeck_Gyro_Pitch                = 355,
+    SteamDeck_Gyro_Yaw                  = 356,
+    SteamDeck_Gyro_Roll                 = 357,
+    SteamDeck_Reserved1                 = 358,
+    SteamDeck_Reserved2                 = 359,
+    SteamDeck_Reserved3                 = 360,
+    SteamDeck_Reserved4                 = 361,
+    SteamDeck_Reserved5                 = 362,
+    SteamDeck_Reserved6                 = 363,
+    SteamDeck_Reserved7                 = 364,
+    SteamDeck_Reserved8                 = 365,
+    SteamDeck_Reserved9                 = 366,
+    SteamDeck_Reserved10                = 367,
+    SteamDeck_Reserved11                = 368,
+    SteamDeck_Reserved12                = 369,
+    SteamDeck_Reserved13                = 370,
+    SteamDeck_Reserved14                = 371,
+    SteamDeck_Reserved15                = 372,
+    SteamDeck_Reserved16                = 373,
+    SteamDeck_Reserved17                = 374,
+    SteamDeck_Reserved18                = 375,
+    SteamDeck_Reserved19                = 376,
+    SteamDeck_Reserved20                = 377,
+    Switch_JoyConButton_N               = 378,
+    Switch_JoyConButton_E               = 379,
+    Switch_JoyConButton_S               = 380,
+    Switch_JoyConButton_W               = 381,
+    PS5_LeftGrip                        = 382,
+    PS5_RightGrip                       = 383,
+    PS5_LeftFn                          = 384,
+    PS5_RightFn                         = 385,
+    Horipad_M1                          = 386,
+    Horipad_M2                          = 387,
+    Horipad_L4                          = 388,
+    Horipad_R4                          = 389,
+    LenovoLegionGo_A                    = 390,
+    LenovoLegionGo_B                    = 391,
+    LenovoLegionGo_X                    = 392,
+    LenovoLegionGo_Y                    = 393,
+    LenovoLegionGo_LB                   = 394,
+    LenovoLegionGo_RB                   = 395,
+    LenovoLegionGo_Menu                 = 396,
+    LenovoLegionGo_View                 = 397,
+    LenovoLegionGo_LeftPad_Touch        = 398,
+    LenovoLegionGo_LeftPad_Swipe        = 399,
+    LenovoLegionGo_LeftPad_Click        = 400,
+    LenovoLegionGo_LeftPad_DPadNorth    = 401,
+    LenovoLegionGo_LeftPad_DPadSouth    = 402,
+    LenovoLegionGo_LeftPad_DPadWest     = 403,
+    LenovoLegionGo_LeftPad_DPadEast     = 404,
+    LenovoLegionGo_RightPad_Touch       = 405,
+    LenovoLegionGo_RightPad_Swipe       = 406,
+    LenovoLegionGo_RightPad_Click       = 407,
+    LenovoLegionGo_RightPad_DPadNorth   = 408,
+    LenovoLegionGo_RightPad_DPadSouth   = 409,
+    LenovoLegionGo_RightPad_DPadWest    = 410,
+    LenovoLegionGo_RightPad_DPadEast    = 411,
+    LenovoLegionGo_LT_SoftPull          = 412,
+    LenovoLegionGo_LT                   = 413,
+    LenovoLegionGo_RT_SoftPull          = 414,
+    LenovoLegionGo_RT                   = 415,
+    LenovoLegionGo_LeftStick_Move       = 416,
+    LenovoLegionGo_LS                   = 417,
+    LenovoLegionGo_LeftStick_DPadNorth  = 418,
+    LenovoLegionGo_LeftStick_DPadSouth  = 419,
+    LenovoLegionGo_LeftStick_DPadWest   = 420,
+    LenovoLegionGo_LeftStick_DPadEast   = 421,
+    LenovoLegionGo_RightStick_Move      = 422,
+    LenovoLegionGo_RS                   = 423,
+    LenovoLegionGo_RightStick_DPadNorth = 424,
+    LenovoLegionGo_RightStick_DPadSouth = 425,
+    LenovoLegionGo_RightStick_DPadWest  = 426,
+    LenovoLegionGo_RightStick_DPadEast  = 427,
+    LenovoLegionGo_Y1                   = 428,
+    LenovoLegionGo_Y2                   = 429,
+    LenovoLegionGo_DPad_Move            = 430,
+    LenovoLegionGo_DPad_North           = 431,
+    LenovoLegionGo_DPad_South           = 432,
+    LenovoLegionGo_DPad_West            = 433,
+    LenovoLegionGo_DPad_East            = 434,
+    LenovoLegionGo_Gyro_Move            = 435,
+    LenovoLegionGo_Gyro_Pitch           = 436,
+    LenovoLegionGo_Gyro_Yaw             = 437,
+    LenovoLegionGo_Gyro_Roll            = 438,
+    LenovoLegionGo_Reserved1            = 439,
+    LenovoLegionGo_Reserved2            = 440,
+    LenovoLegionGo_Reserved3            = 441,
+    LenovoLegionGo_Reserved4            = 442,
+    LenovoLegionGo_Reserved5            = 443,
+    LenovoLegionGo_Reserved6            = 444,
+    LenovoLegionGo_Reserved7            = 445,
+    LenovoLegionGo_Reserved8            = 446,
+    LenovoLegionGo_Reserved9            = 447,
+    LenovoLegionGo_Reserved10           = 448,
+    LenovoLegionGo_Reserved11           = 449,
+    LenovoLegionGo_Reserved12           = 450,
+    LenovoLegionGo_Reserved13           = 451,
+    LenovoLegionGo_Reserved14           = 452,
+    LenovoLegionGo_Reserved15           = 453,
+    LenovoLegionGo_Reserved16           = 454,
+    LenovoLegionGo_Reserved17           = 455,
+    LenovoLegionGo_Reserved18           = 456,
+    LenovoLegionGo_Reserved19           = 457,
+    LenovoLegionGo_Reserved20           = 458,
+    Generic_L4                          = 459,
+    Generic_R4                          = 460,
+    Generic_L5                          = 461,
+    Generic_R5                          = 462,
+    Generic_PL                          = 463,
+    Generic_PR                          = 464,
+    Generic_C                           = 465,
+    Generic_Z                           = 466,
+    Generic_MISC1                       = 467,
+    Generic_MISC2                       = 468,
+    Generic_MISC3                       = 469,
+    Generic_MISC4                       = 470,
+    Generic_MISC5                       = 471,
+    Generic_MISC6                       = 472,
+    Generic_MISC7                       = 473,
+    Generic_MISC8                       = 474,
+    Count                               = 475,
+    MaximumPossibleValue                = 32767,
 }
 
 ESteamControllerLEDFlag :: enum i32 {
@@ -3278,6 +3430,7 @@ EItemState :: enum i32 {
     NeedsUpdate     = 8,
     Downloading     = 16,
     DownloadPending = 32,
+    DisabledLocally = 64,
 }
 
 EItemStatistic :: enum i32 {
@@ -3302,6 +3455,7 @@ EItemPreviewType :: enum i32 {
     Sketchfab                      = 2,
     EnvironmentMap_HorizontalCross = 3,
     EnvironmentMap_LatLong         = 4,
+    Clip                           = 5,
     ReservedMax                    = 255,
 }
 
@@ -3320,29 +3474,176 @@ ESteamItemFlags :: enum i32 {
 }
 
 EParentalFeature :: enum i32 {
-    Invalid       = 0,
-    Store         = 1,
-    Community     = 2,
-    Profile       = 3,
-    Friends       = 4,
-    News          = 5,
-    Trading       = 6,
-    Settings      = 7,
-    Console       = 8,
-    Browser       = 9,
-    ParentalSetup = 10,
-    Library       = 11,
-    Test          = 12,
-    SiteLicense   = 13,
-    Max           = 14,
+    Invalid              = 0,
+    Store                = 1,
+    Community            = 2,
+    Profile              = 3,
+    Friends              = 4,
+    News                 = 5,
+    Trading              = 6,
+    Settings             = 7,
+    Console              = 8,
+    Browser              = 9,
+    ParentalSetup        = 10,
+    Library              = 11,
+    Test                 = 12,
+    SiteLicense          = 13,
+    KioskMode_Deprecated = 14,
+    BlockAlways          = 15,
+    Desktop              = 16,
+    Max                  = 17,
 }
 
 ESteamDeviceFormFactor :: enum i32 {
-    Unknown  = 0,
-    Phone    = 1,
-    Tablet   = 2,
-    Computer = 3,
-    TV       = 4,
+    Unknown   = 0,
+    Phone     = 1,
+    Tablet    = 2,
+    Computer  = 3,
+    TV        = 4,
+    VRHeadset = 5,
+}
+
+ERemotePlayInputType :: enum i32 {
+    Unknown         = 0,
+    MouseMotion     = 1,
+    MouseButtonDown = 2,
+    MouseButtonUp   = 3,
+    MouseWheel      = 4,
+    KeyDown         = 5,
+    KeyUp           = 6,
+}
+
+ERemotePlayMouseButton :: enum i32 {
+    Left   = 1,
+    Right  = 2,
+    Middle = 16,
+    X1     = 32,
+    X2     = 64,
+}
+
+ERemotePlayMouseWheelDirection :: enum i32 {
+    Up    = 1,
+    Down  = 2,
+    Left  = 3,
+    Right = 4,
+}
+
+ERemotePlayKeyModifier :: enum i32 {
+    None         = 0,
+    LeftShift    = 1,
+    RightShift   = 2,
+    LeftControl  = 64,
+    RightControl = 128,
+    LeftAlt      = 256,
+    RightAlt     = 512,
+    LeftGUI      = 1024,
+    RightGUI     = 2048,
+    NumLock      = 4096,
+    CapsLock     = 8192,
+    Mask         = 65535,
+}
+
+ERemotePlayScancode :: enum i32 {
+    ScancodeUnknown        = 0,
+    ScancodeA              = 4,
+    ScancodeB              = 5,
+    ScancodeC              = 6,
+    ScancodeD              = 7,
+    ScancodeE              = 8,
+    ScancodeF              = 9,
+    ScancodeG              = 10,
+    ScancodeH              = 11,
+    ScancodeI              = 12,
+    ScancodeJ              = 13,
+    ScancodeK              = 14,
+    ScancodeL              = 15,
+    ScancodeM              = 16,
+    ScancodeN              = 17,
+    ScancodeO              = 18,
+    ScancodeP              = 19,
+    ScancodeQ              = 20,
+    ScancodeR              = 21,
+    ScancodeS              = 22,
+    ScancodeT              = 23,
+    ScancodeU              = 24,
+    ScancodeV              = 25,
+    ScancodeW              = 26,
+    ScancodeX              = 27,
+    ScancodeY              = 28,
+    ScancodeZ              = 29,
+    Scancode1              = 30,
+    Scancode2              = 31,
+    Scancode3              = 32,
+    Scancode4              = 33,
+    Scancode5              = 34,
+    Scancode6              = 35,
+    Scancode7              = 36,
+    Scancode8              = 37,
+    Scancode9              = 38,
+    Scancode0              = 39,
+    ScancodeReturn         = 40,
+    ScancodeEscape         = 41,
+    ScancodeBackspace      = 42,
+    ScancodeTab            = 43,
+    ScancodeSpace          = 44,
+    ScancodeMinus          = 45,
+    ScancodeEquals         = 46,
+    ScancodeLeftBracket    = 47,
+    ScancodeRightBracket   = 48,
+    ScancodeBackslash      = 49,
+    ScancodeSemicolon      = 51,
+    ScancodeApostrophe     = 52,
+    ScancodeGrave          = 53,
+    ScancodeComma          = 54,
+    ScancodePeriod         = 55,
+    ScancodeSlash          = 56,
+    ScancodeCapsLock       = 57,
+    ScancodeF1             = 58,
+    ScancodeF2             = 59,
+    ScancodeF3             = 60,
+    ScancodeF4             = 61,
+    ScancodeF5             = 62,
+    ScancodeF6             = 63,
+    ScancodeF7             = 64,
+    ScancodeF8             = 65,
+    ScancodeF9             = 66,
+    ScancodeF10            = 67,
+    ScancodeF11            = 68,
+    ScancodeF12            = 69,
+    ScancodeInsert         = 73,
+    ScancodeHome           = 74,
+    ScancodePageUp         = 75,
+    ScancodeDelete         = 76,
+    ScancodeEnd            = 77,
+    ScancodePageDown       = 78,
+    ScancodeRight          = 79,
+    ScancodeLeft           = 80,
+    ScancodeDown           = 81,
+    ScancodeUp             = 82,
+    ScancodeKeypadDivide   = 84,
+    ScancodeKeypadMultiply = 85,
+    ScancodeKeypadMinus    = 86,
+    ScancodeKeypadPlus     = 87,
+    ScancodeKeypadEnter    = 88,
+    ScancodeKeypad1        = 89,
+    ScancodeKeypad2        = 90,
+    ScancodeKeypad3        = 91,
+    ScancodeKeypad4        = 92,
+    ScancodeKeypad5        = 93,
+    ScancodeKeypad6        = 94,
+    ScancodeKeypad7        = 95,
+    ScancodeKeypad8        = 96,
+    ScancodeKeypad9        = 97,
+    ScancodeKeypad0        = 98,
+    ScancodeKeypadPeriod   = 99,
+    ScancodeLeftControl    = 224,
+    ScancodeLeftShift      = 225,
+    ScancodeLeftAlt        = 226,
+    ScancodeLeftGUI        = 227,
+    ScancodeRightControl   = 228,
+    ScancodeRightShift     = 229,
+    ScancodeRightALT       = 230,
+    ScancodeRightGUI       = 231,
 }
 
 ESteamNetworkingAvailability :: enum i32 {
@@ -3363,7 +3664,6 @@ ESteamNetworkingIdentityType :: enum i32 {
     SteamID        = 16,
     XboxPairwiseID = 17,
     SonyPSN        = 18,
-    GoogleStadia   = 19,
     IPAddress      = 1,
     GenericString  = 2,
     GenericBytes   = 3,
@@ -3450,11 +3750,16 @@ ESteamNetworkingConfigValue :: enum i32 {
     TimeoutInitial                                 = 24,
     TimeoutConnected                               = 25,
     SendBufferSize                                 = 9,
+    RecvBufferSize                                 = 47,
+    RecvBufferMessages                             = 48,
+    RecvMaxMessageSize                             = 49,
+    RecvMaxSegmentsPerPacket                       = 50,
     ConnectionUserData                             = 40,
     SendRateMin                                    = 10,
     SendRateMax                                    = 11,
     NagleTime                                      = 12,
     IP_AllowWithoutAuth                            = 23,
+    IPLocalHost_AllowWithoutAuth                   = 52,
     MTU_PacketSize                                 = 32,
     MTU_DataSize                                   = 33,
     Unencrypted                                    = 34,
@@ -3462,10 +3767,17 @@ ESteamNetworkingConfigValue :: enum i32 {
     LocalVirtualPort                               = 38,
     DualWifi_Enable                                = 39,
     EnableDiagnosticsUI                            = 46,
+    SendTimeSincePreviousPacket                    = 59,
     FakePacketLoss_Send                            = 2,
     FakePacketLoss_Recv                            = 3,
     FakePacketLag_Send                             = 4,
     FakePacketLag_Recv                             = 5,
+    FakePacketJitter_Send_Avg                      = 53,
+    FakePacketJitter_Send_Max                      = 54,
+    FakePacketJitter_Send_Pct                      = 55,
+    FakePacketJitter_Recv_Avg                      = 56,
+    FakePacketJitter_Recv_Max                      = 57,
+    FakePacketJitter_Recv_Pct                      = 58,
     FakePacketReorder_Send                         = 6,
     FakePacketReorder_Recv                         = 7,
     FakePacketReorder_Time                         = 8,
@@ -3477,13 +3789,14 @@ ESteamNetworkingConfigValue :: enum i32 {
     FakeRateLimit_Send_Burst                       = 43,
     FakeRateLimit_Recv_Rate                        = 44,
     FakeRateLimit_Recv_Burst                       = 45,
-    CallbacConnectionStatusChanged                 = 201,
-    CallbacAuthStatusChanged                       = 202,
-    CallbacRelayNetworkStatusChanged               = 203,
-    CallbacMessagesSessionRequest                  = 204,
-    CallbacMessagesSessionFailed                   = 205,
-    CallbacCreateConnectionSignaling               = 206,
-    CallbacFakeIPResult                            = 207,
+    OutOfOrderCorrectionWindowMicroseconds         = 51,
+    Callback_ConnectionStatusChanged               = 201,
+    Callback_AuthStatusChanged                     = 202,
+    Callback_RelayNetworkStatusChanged             = 203,
+    Callback_MessagesSessionRequest                = 204,
+    Callback_MessagesSessionFailed                 = 205,
+    Callback_CreateConnectionSignaling             = 206,
+    Callback_FakeIPResult                          = 207,
     P2P_STUN_ServerList                            = 103,
     P2P_Transport_ICE_Enable                       = 104,
     P2P_Transport_ICE_Penalty                      = 105,
@@ -3497,15 +3810,18 @@ ESteamNetworkingConfigValue :: enum i32 {
     SDRClient_MinPingsBeforePingAccurate           = 21,
     SDRClient_SingleSocket                         = 22,
     SDRClient_ForceRelayCluster                    = 29,
-    SDRClient_DebugTicketAddress                   = 30,
+    SDRClient_DevTicket                            = 30,
     SDRClient_ForceProxyAddr                       = 31,
     SDRClient_FakeClusterPing                      = 36,
+    SDRClient_LimitPingProbesToNearestN            = 60,
     LogLevel_AckRTT                                = 13,
     LogLevel_PacketDecode                          = 14,
     LogLevel_Message                               = 15,
     LogLevel_PacketGaps                            = 16,
     LogLevel_P2PRendezvous                         = 17,
     LogLevel_SDRRelayPings                         = 18,
+    ECN                                            = 999,
+    SDRClient_EnableTOSProbes                      = 998,
     DELETED_EnumerateDevVars                       = 35,
     _Force32Bit                                    = 2147483647,
 }
@@ -3545,49 +3861,51 @@ IHTMLSurface_EHTMLMouseButton :: enum i32 {
     Middle = 2,
 }
 
-IHTMLSurface_EMouseCursor :: enum i32 {
-    user           = 0,
-    none           = 1,
-    arrow          = 2,
-    ibeam          = 3,
-    hourglass      = 4,
-    waitarrow      = 5,
-    crosshair      = 6,
-    up             = 7,
-    sizenw         = 8,
-    sizese         = 9,
-    sizene         = 10,
-    sizesw         = 11,
-    sizew          = 12,
-    sizee          = 13,
-    sizen          = 14,
-    sizes          = 15,
-    sizewe         = 16,
-    sizens         = 17,
-    sizeall        = 18,
-    no             = 19,
-    hand           = 20,
-    blank          = 21,
-    middle_pan     = 22,
-    north_pan      = 23,
-    north_east_pan = 24,
-    east_pan       = 25,
-    south_east_pan = 26,
-    south_pan      = 27,
-    south_west_pan = 28,
-    west_pan       = 29,
-    north_west_pan = 30,
-    alias          = 31,
-    cell           = 32,
-    colresize      = 33,
-    copycur        = 34,
-    verticaltext   = 35,
-    rowresize      = 36,
-    zoomin         = 37,
-    zoomout        = 38,
-    help           = 39,
-    custom         = 40,
-    last           = 41,
+IHTMLSurface_EHTMLMouseCursor :: enum i32 {
+    User         = 0,
+    None         = 1,
+    Arrow        = 2,
+    IBeam        = 3,
+    Hourglass    = 4,
+    WaitArrow    = 5,
+    Crosshair    = 6,
+    Up           = 7,
+    SizeNW       = 8,
+    SizeSE       = 9,
+    SizeNE       = 10,
+    SizeSW       = 11,
+    SizeW        = 12,
+    SizeE        = 13,
+    SizeN        = 14,
+    SizeS        = 15,
+    SizeWE       = 16,
+    SizeNS       = 17,
+    SizeAll      = 18,
+    No           = 19,
+    Hand         = 20,
+    Blank        = 21,
+    MiddlePan    = 22,
+    NorthPan     = 23,
+    NorthEastPan = 24,
+    EastPan      = 25,
+    SouthEastPan = 26,
+    SouthPan     = 27,
+    SouthWestPan = 28,
+    WestPan      = 29,
+    NorthWestPan = 30,
+    Alias        = 31,
+    Cell         = 32,
+    ColResize    = 33,
+    CopyCur      = 34,
+    VerticalText = 35,
+    RowResize    = 36,
+    ZoomIn       = 37,
+    ZoomOut      = 38,
+    Help         = 39,
+    Custom       = 40,
+    SizeNWSE     = 41,
+    SizeNESW     = 42,
+    last         = 43,
 }
 
 IHTMLSurface_EHTMLKeyModifiers :: enum i32 {
@@ -3806,7 +4124,8 @@ SteamNetConnectionRealTimeStatus :: struct #max_field_align(CALLBACK_ALIGN) {
     cbPendingReliable:         i32,
     cbSentUnackedReliable:     i32,
     usecQueueTime:             SteamNetworkingMicroseconds,
-    reserved:                  [16]u32,
+    usecMaxJitter:             i32,
+    reserved:                  [15]u32,
 }
 
 SteamNetConnectionRealTimeLaneStatus :: struct #max_field_align(CALLBACK_ALIGN) {
@@ -3850,32 +4169,30 @@ SteamAPIWarningMessageHook :: #type proc "c" (_: i32, _: cstring)
 
 Client :: SteamClient
 User :: SteamUser_v023
-Friends :: SteamFriends_v017
+Friends :: SteamFriends_v018
 Utils :: SteamUtils_v010
 Matchmaking :: SteamMatchmaking_v009
 MatchmakingServers :: SteamMatchmakingServers_v002
-GameSearch :: SteamGameSearch_v001
 Parties :: SteamParties_v002
 RemoteStorage :: SteamRemoteStorage_v016
-UserStats :: SteamUserStats_v012
-Apps :: SteamApps_v008
+UserStats :: SteamUserStats_v013
+Apps :: SteamApps_v009
 Networking :: SteamNetworking_v006
 Screenshots :: SteamScreenshots_v003
 Music :: SteamMusic_v001
-MusicRemote :: SteamMusicRemote_v001
 HTTP :: SteamHTTP_v003
 Input :: SteamInput_v006
 Controller :: SteamController_v008
-UGC :: SteamUGC_v020
+UGC :: SteamUGC_v021
 HTMLSurface :: SteamHTMLSurface_v005
 Inventory :: SteamInventory_v003
 Video :: SteamVideo_v007
 ParentalSettings :: SteamParentalSettings_v001
-RemotePlay :: SteamRemotePlay_v002
+RemotePlay :: SteamRemotePlay_v004
 NetworkingMessages_SteamAPI :: SteamNetworkingMessages_SteamAPI_v002
 NetworkingSockets_SteamAPI :: SteamNetworkingSockets_SteamAPI_v012
 NetworkingUtils_SteamAPI :: SteamNetworkingUtils_SteamAPI_v004
-Timeline :: SteamTimeline_v001
+Timeline :: SteamTimeline_v004
 
 // ---------------
 // Interface types
@@ -3891,7 +4208,6 @@ IMatchmakingPingResponse :: distinct rawptr
 IMatchmakingPlayersResponse :: distinct rawptr
 IMatchmakingRulesResponse :: distinct rawptr
 IMatchmakingServers :: distinct rawptr
-IGameSearch :: distinct rawptr
 IParties :: distinct rawptr
 IRemoteStorage :: distinct rawptr
 IUserStats :: distinct rawptr
@@ -3899,7 +4215,6 @@ IApps :: distinct rawptr
 INetworking :: distinct rawptr
 IScreenshots :: distinct rawptr
 IMusic :: distinct rawptr
-IMusicRemote :: distinct rawptr
 IHTTP :: distinct rawptr
 IInput :: distinct rawptr
 IController :: distinct rawptr
@@ -4097,11 +4412,11 @@ foreign lib {
 
     // returns the filename path of the current running Steam process, used if you need to load an explicit steam dll by name.
     // DEPRECATED - implementation is Windows only, and the path returned is a UTF-8 string which must be converted to UTF-16 for use with Win32 APIs
-    SteamAPI_GetSteamInstallPath :: proc() -> cstring ---
+    GetSteamInstallPath :: proc() -> cstring ---
 
-    // sets whether or not SteaRunCallbacks() should do a try {} catch (...) {} around calls to issuing callbacks
+    // sets whether or not SteamAPI_RunCallbacks() should do a try {} catch (...) {} around calls to issuing callbacks
     // This is ignored if you are using the manual callback dispatch method
-    bTryCatchCallbacks :: proc() ---
+    SetTryCatchCallbacks :: proc(bTryCatchCallbacks: bool) ---
 
     // exists only for backwards compat with code written against older SDKs
     InitSafe :: proc() -> bool ---
@@ -4146,32 +4461,30 @@ foreign lib {
 @(link_prefix = "SteamAPI_")
 foreign lib {
     SteamUser_v023 :: proc() -> ^IUser ---
-    SteamFriends_v017 :: proc() -> ^IFriends ---
+    SteamFriends_v018 :: proc() -> ^IFriends ---
     SteamUtils_v010 :: proc() -> ^IUtils ---
     SteamMatchmaking_v009 :: proc() -> ^IMatchmaking ---
     SteamMatchmakingServers_v002 :: proc() -> ^IMatchmakingServers ---
-    SteamGameSearch_v001 :: proc() -> ^IGameSearch ---
     SteamParties_v002 :: proc() -> ^IParties ---
     SteamRemoteStorage_v016 :: proc() -> ^IRemoteStorage ---
-    SteamUserStats_v012 :: proc() -> ^IUserStats ---
-    SteamApps_v008 :: proc() -> ^IApps ---
+    SteamUserStats_v013 :: proc() -> ^IUserStats ---
+    SteamApps_v009 :: proc() -> ^IApps ---
     SteamNetworking_v006 :: proc() -> ^INetworking ---
     SteamScreenshots_v003 :: proc() -> ^IScreenshots ---
     SteamMusic_v001 :: proc() -> ^IMusic ---
-    SteamMusicRemote_v001 :: proc() -> ^IMusicRemote ---
     SteamHTTP_v003 :: proc() -> ^IHTTP ---
     SteamInput_v006 :: proc() -> ^IInput ---
     SteamController_v008 :: proc() -> ^IController ---
-    SteamUGC_v020 :: proc() -> ^IUGC ---
+    SteamUGC_v021 :: proc() -> ^IUGC ---
     SteamHTMLSurface_v005 :: proc() -> ^IHTMLSurface ---
     SteamInventory_v003 :: proc() -> ^IInventory ---
     SteamVideo_v007 :: proc() -> ^IVideo ---
     SteamParentalSettings_v001 :: proc() -> ^IParentalSettings ---
-    SteamRemotePlay_v002 :: proc() -> ^IRemotePlay ---
+    SteamRemotePlay_v004 :: proc() -> ^IRemotePlay ---
     SteamNetworkingMessages_SteamAPI_v002 :: proc() -> ^INetworkingMessages ---
     SteamNetworkingSockets_SteamAPI_v012 :: proc() -> ^INetworkingSockets ---
     SteamNetworkingUtils_SteamAPI_v004 :: proc() -> ^INetworkingUtils ---
-    SteamTimeline_v001 :: proc() -> ^ITimeline ---
+    SteamTimeline_v004 :: proc() -> ^ITimeline ---
 }
 
 // -------------------------------------------
@@ -4212,8 +4525,6 @@ foreign lib {
     NetworkingIdentity_GetXboxPairwiseID :: proc(self: ^SteamNetworkingIdentity) -> cstring ---
     NetworkingIdentity_SetPSNID :: proc(self: ^SteamNetworkingIdentity, id: u64) ---
     NetworkingIdentity_GetPSNID :: proc(self: ^SteamNetworkingIdentity) -> u64 ---
-    NetworkingIdentity_SetStadiaID :: proc(self: ^SteamNetworkingIdentity, id: u64) ---
-    NetworkingIdentity_GetStadiaID :: proc(self: ^SteamNetworkingIdentity) -> u64 ---
     NetworkingIdentity_SetIPAddr :: proc(self: ^SteamNetworkingIdentity, addr: ^SteamNetworkingIPAddr) ---
     NetworkingIdentity_GetIPAddr :: proc(self: ^SteamNetworkingIdentity) -> ^SteamNetworkingIPAddr ---
     NetworkingIdentity_SetIPv4Addr :: proc(self: ^SteamNetworkingIdentity, nIPv4: u32, nPort: u16) ---
@@ -4264,36 +4575,34 @@ foreign lib {
     Client_ConnectToGlobalUser :: proc(self: ^IClient, hSteamPipe: HSteamPipe) -> HSteamUser ---
     Client_CreateLocalUser :: proc(self: ^IClient, phSteamPipe: ^HSteamPipe, eAccountType: EAccountType) -> HSteamUser ---
     Client_ReleaseUser :: proc(self: ^IClient, hSteamPipe: HSteamPipe, hUser: HSteamUser) ---
-    Client_GetIUser :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUser ---
-    Client_GetIGameServer :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IGameServer ---
+    Client_GetISteamUser :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUser ---
+    Client_GetISteamGameServer :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IGameServer ---
     Client_SetLocalIPBinding :: proc(self: ^IClient, unIP: ^SteamIPAddress, usPort: u16) ---
-    Client_GetIFriends :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IFriends ---
-    Client_GetIUtils :: proc(self: ^IClient, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUtils ---
-    Client_GetIMatchmaking :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMatchmaking ---
-    Client_GetIMatchmakingServers :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMatchmakingServers ---
-    Client_GetIGenericInterface :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> rawptr ---
-    Client_GetIUserStats :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUserStats ---
-    Client_GetIGameServerStats :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IGameServerStats ---
-    Client_GetIApps :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IApps ---
-    Client_GetINetworking :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^INetworking ---
-    Client_GetIRemoteStorage :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IRemoteStorage ---
-    Client_GetIScreenshots :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IScreenshots ---
-    Client_GetIGameSearch :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IGameSearch ---
+    Client_GetISteamFriends :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IFriends ---
+    Client_GetISteamUtils :: proc(self: ^IClient, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUtils ---
+    Client_GetISteamMatchmaking :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMatchmaking ---
+    Client_GetISteamMatchmakingServers :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMatchmakingServers ---
+    Client_GetISteamGenericInterface :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> rawptr ---
+    Client_GetISteamUserStats :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUserStats ---
+    Client_GetISteamGameServerStats :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IGameServerStats ---
+    Client_GetISteamApps :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IApps ---
+    Client_GetISteamNetworking :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^INetworking ---
+    Client_GetISteamRemoteStorage :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IRemoteStorage ---
+    Client_GetISteamScreenshots :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IScreenshots ---
     Client_GetIPCCallCount :: proc(self: ^IClient) -> u32 ---
     Client_SetWarningMessageHook :: proc(self: ^IClient, pFunction: SteamAPIWarningMessageHook) ---
     Client_BShutdownIfAllPipesClosed :: proc(self: ^IClient) -> bool ---
-    Client_GetIHTTP :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IHTTP ---
-    Client_GetIController :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IController ---
-    Client_GetIUGC :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUGC ---
-    Client_GetIMusic :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMusic ---
-    Client_GetIMusicRemote :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMusicRemote ---
-    Client_GetIHTMLSurface :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IHTMLSurface ---
-    Client_GetIInventory :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IInventory ---
-    Client_GetIVideo :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IVideo ---
-    Client_GetIParentalSettings :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IParentalSettings ---
-    Client_GetIInput :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IInput ---
-    Client_GetIParties :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IParties ---
-    Client_GetIRemotePlay :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IRemotePlay ---
+    Client_GetISteamHTTP :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IHTTP ---
+    Client_GetISteamController :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IController ---
+    Client_GetISteamUGC :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IUGC ---
+    Client_GetISteamMusic :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IMusic ---
+    Client_GetISteamHTMLSurface :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IHTMLSurface ---
+    Client_GetISteamInventory :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IInventory ---
+    Client_GetISteamVideo :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IVideo ---
+    Client_GetISteamParentalSettings :: proc(self: ^IClient, hSteamuser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IParentalSettings ---
+    Client_GetISteamInput :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IInput ---
+    Client_GetISteamParties :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IParties ---
+    Client_GetISteamRemotePlay :: proc(self: ^IClient, hSteamUser: HSteamUser, hSteamPipe: HSteamPipe, pchVersion: cstring) -> ^IRemotePlay ---
 
     User_GetHSteamUser :: proc(self: ^IUser) -> HSteamUser ---
     User_BLoggedOn :: proc(self: ^IUser) -> bool ---
@@ -4330,7 +4639,6 @@ foreign lib {
     User_BSetDurationControlOnlineState :: proc(self: ^IUser, eNewState: EDurationControlOnlineState) -> bool ---
 
     Friends_GetPersonaName :: proc(self: ^IFriends) -> cstring ---
-    Friends_SetPersonaName :: proc(self: ^IFriends, pchPersonaName: cstring) -> SteamAPICall ---
     Friends_GetPersonaState :: proc(self: ^IFriends) -> EPersonaState ---
     Friends_GetFriendCount :: proc(self: ^IFriends, iFriendFlags: i32) -> i32 ---
     Friends_GetFriendByIndex :: proc(self: ^IFriends, iFriend: i32, iFriendFlags: i32) -> CSteamID ---
@@ -4371,7 +4679,6 @@ foreign lib {
     Friends_GetClanOwner :: proc(self: ^IFriends, steamIDClan: CSteamID) -> CSteamID ---
     Friends_GetClanOfficerCount :: proc(self: ^IFriends, steamIDClan: CSteamID) -> i32 ---
     Friends_GetClanOfficerByIndex :: proc(self: ^IFriends, steamIDClan: CSteamID, iOfficer: i32) -> CSteamID ---
-    Friends_GetUserRestrictions :: proc(self: ^IFriends) -> u32 ---
     Friends_SetRichPresence :: proc(self: ^IFriends, pchKey: cstring, pchValue: cstring) -> bool ---
     Friends_ClearRichPresence :: proc(self: ^IFriends) ---
     Friends_GetFriendRichPresence :: proc(self: ^IFriends, steamIDFriend: CSteamID, pchKey: cstring) -> cstring ---
@@ -4521,20 +4828,6 @@ foreign lib {
     MatchmakingServers_ServerRules :: proc(self: ^IMatchmakingServers, unIP: u32, usPort: u16, pRequestServersResponse: ^IMatchmakingRulesResponse) -> HServerQuery ---
     MatchmakingServers_CancelServerQuery :: proc(self: ^IMatchmakingServers, hServerQuery: HServerQuery) ---
 
-    GameSearch_AddGameSearchParams :: proc(self: ^IGameSearch, pchKeyToFind: cstring, pchValuesToFind: cstring) -> EGameSearchErrorCode ---
-    GameSearch_SearchForGameWithLobby :: proc(self: ^IGameSearch, steamIDLobby: CSteamID, nPlayerMin: i32, nPlayerMax: i32) -> EGameSearchErrorCode ---
-    GameSearch_SearchForGameSolo :: proc(self: ^IGameSearch, nPlayerMin: i32, nPlayerMax: i32) -> EGameSearchErrorCode ---
-    GameSearch_AcceptGame :: proc(self: ^IGameSearch) -> EGameSearchErrorCode ---
-    GameSearch_DeclineGame :: proc(self: ^IGameSearch) -> EGameSearchErrorCode ---
-    GameSearch_RetrieveConnectionDetails :: proc(self: ^IGameSearch, steamIDHost: CSteamID, pchConnectionDetails: ^u8, cubConnectionDetails: i32) -> EGameSearchErrorCode ---
-    GameSearch_EndGameSearch :: proc(self: ^IGameSearch) -> EGameSearchErrorCode ---
-    GameSearch_SetGameHostParams :: proc(self: ^IGameSearch, pchKey: cstring, pchValue: cstring) -> EGameSearchErrorCode ---
-    GameSearch_SetConnectionDetails :: proc(self: ^IGameSearch, pchConnectionDetails: cstring, cubConnectionDetails: i32) -> EGameSearchErrorCode ---
-    GameSearch_RequestPlayersForGame :: proc(self: ^IGameSearch, nPlayerMin: i32, nPlayerMax: i32, nMaxTeamSize: i32) -> EGameSearchErrorCode ---
-    GameSearch_HostConfirmGameStart :: proc(self: ^IGameSearch, ullUniqueGameID: u64) -> EGameSearchErrorCode ---
-    GameSearch_CancelRequestPlayersForGame :: proc(self: ^IGameSearch) -> EGameSearchErrorCode ---
-    GameSearch_SubmitPlayerResult :: proc(self: ^IGameSearch, ullUniqueGameID: u64, steamIDPlayer: CSteamID, EPlayerResult: EPlayerResult) -> EGameSearchErrorCode ---
-    GameSearch_EndGame :: proc(self: ^IGameSearch, ullUniqueGameID: u64) -> EGameSearchErrorCode ---
 
     Parties_GetNumActiveBeacons :: proc(self: ^IParties) -> u32 ---
     Parties_GetBeaconByIndex :: proc(self: ^IParties, unIndex: u32) -> PartyBeaconID ---
@@ -4609,7 +4902,6 @@ foreign lib {
     RemoteStorage_BeginFileWriteBatch :: proc(self: ^IRemoteStorage) -> bool ---
     RemoteStorage_EndFileWriteBatch :: proc(self: ^IRemoteStorage) -> bool ---
 
-    UserStats_RequestCurrentStats :: proc(self: ^IUserStats) -> bool ---
     UserStats_GetStatInt32 :: proc(self: ^IUserStats, pchName: cstring, pData: ^i32) -> bool ---
     UserStats_GetStatFloat :: proc(self: ^IUserStats, pchName: cstring, pData: ^f32) -> bool ---
     UserStats_SetStatInt32 :: proc(self: ^IUserStats, pchName: cstring, nData: i32) -> bool ---
@@ -4649,9 +4941,9 @@ foreign lib {
     UserStats_GetAchievementAchievedPercent :: proc(self: ^IUserStats, pchName: cstring, pflPercent: ^f32) -> bool ---
     UserStats_RequestGlobalStats :: proc(self: ^IUserStats, nHistoryDays: i32) -> SteamAPICall ---
     UserStats_GetGlobalStatInt64 :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^i64) -> bool ---
-    UserStats_GetGlobalStatFloat64 :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^f64) -> bool ---
+    UserStats_GetGlobalStatDouble :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^f64) -> bool ---
     UserStats_GetGlobalStatHistoryInt64 :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^i64, cubData: u32) -> i32 ---
-    UserStats_GetGlobalStatHistoryFloat64 :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^f64, cubData: u32) -> i32 ---
+    UserStats_GetGlobalStatHistoryDouble :: proc(self: ^IUserStats, pchStatName: cstring, pData: ^f64, cubData: u32) -> i32 ---
     UserStats_GetAchievementProgressLimitsInt32 :: proc(self: ^IUserStats, pchName: cstring, pnMinProgress: ^i32, pnMaxProgress: ^i32) -> bool ---
     UserStats_GetAchievementProgressLimitsFloat :: proc(self: ^IUserStats, pchName: cstring, pfMinProgress: ^f32, pfMaxProgress: ^f32) -> bool ---
 
@@ -4685,9 +4977,9 @@ foreign lib {
     Apps_BIsSubscribedFromFamilySharing :: proc(self: ^IApps) -> bool ---
     Apps_BIsTimedTrial :: proc(self: ^IApps, punSecondsAllowed: ^u32, punSecondsPlayed: ^u32) -> bool ---
     Apps_SetDlcContext :: proc(self: ^IApps, nAppID: AppId) -> bool ---
-    Apps_GetNumBetas :: proc(self: ^IApps, unAppID: AppId, pnAvailable: ^i32, pnPrivate: ^i32) -> i32 ---
-    Apps_GetBetaInfo :: proc(self: ^IApps, unAppID: AppId, iBetaIndex: i32, punFlags: ^u32, punBuildID: ^u32, pchBetaName: [^]byte, cchBetaName: i32, pchDescription: [^]byte, cchDescription: i32) -> bool ---
-    Apps_SetActiveBeta :: proc(self: ^IApps, unAppID: AppId, pchBetaName: cstring) -> bool ---
+    Apps_GetNumBetas :: proc(self: ^IApps, pnAvailable: ^i32, pnPrivate: ^i32) -> i32 ---
+    Apps_GetBetaInfo :: proc(self: ^IApps, iBetaIndex: i32, punFlags: ^u32, punBuildID: ^u32, pchBetaName: [^]byte, cchBetaName: i32, pchDescription: [^]byte, cchDescription: i32, punLastUpdated: ^u32) -> bool ---
+    Apps_SetActiveBeta :: proc(self: ^IApps, pchBetaName: cstring) -> bool ---
 
     Networking_SendP2PPacket :: proc(self: ^INetworking, steamIDRemote: CSteamID, pubData: rawptr, cubData: u32, eP2PSendType: EP2PSend, nChannel: i32) -> bool ---
     Networking_IsP2PPacketAvailable :: proc(self: ^INetworking, pcubMsgSize: ^u32, nChannel: i32) -> bool ---
@@ -4724,7 +5016,7 @@ foreign lib {
 
     Music_BIsEnabled :: proc(self: ^IMusic) -> bool ---
     Music_BIsPlaying :: proc(self: ^IMusic) -> bool ---
-    Music_GetPlaybackStatus :: proc(self: ^IMusic) -> AudioPlaybacStatus ---
+    Music_GetPlaybackStatus :: proc(self: ^IMusic) -> AudioPlayback_Status ---
     Music_Play :: proc(self: ^IMusic) ---
     Music_Pause :: proc(self: ^IMusic) ---
     Music_PlayPrevious :: proc(self: ^IMusic) ---
@@ -4732,38 +5024,6 @@ foreign lib {
     Music_SetVolume :: proc(self: ^IMusic, flVolume: f32) ---
     Music_GetVolume :: proc(self: ^IMusic) -> f32 ---
 
-    MusicRemote_RegisterSteamMusicRemote :: proc(self: ^IMusicRemote, pchName: cstring) -> bool ---
-    MusicRemote_DeregisterSteamMusicRemote :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_BIsCurrentMusicRemote :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_BActivationSuccess :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_SetDisplayName :: proc(self: ^IMusicRemote, pchDisplayName: cstring) -> bool ---
-    MusicRemote_SetPNGIcon_64x64 :: proc(self: ^IMusicRemote, pvBuffer: rawptr, cbBufferLength: u32) -> bool ---
-    MusicRemote_EnablePlayPrevious :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_EnablePlayNext :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_EnableShuffled :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_EnableLooped :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_EnableQueue :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_EnablePlaylists :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_UpdatePlaybackStatus :: proc(self: ^IMusicRemote, nStatus: AudioPlaybacStatus) -> bool ---
-    MusicRemote_UpdateShuffled :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_UpdateLooped :: proc(self: ^IMusicRemote, bValue: bool) -> bool ---
-    MusicRemote_UpdateVolume :: proc(self: ^IMusicRemote, flValue: f32) -> bool ---
-    MusicRemote_CurrentEntryWillChange :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_CurrentEntryIsAvailable :: proc(self: ^IMusicRemote, bAvailable: bool) -> bool ---
-    MusicRemote_UpdateCurrentEntryText :: proc(self: ^IMusicRemote, pchText: cstring) -> bool ---
-    MusicRemote_UpdateCurrentEntryElapsedSeconds :: proc(self: ^IMusicRemote, nValue: i32) -> bool ---
-    MusicRemote_UpdateCurrentEntryCoverArt :: proc(self: ^IMusicRemote, pvBuffer: rawptr, cbBufferLength: u32) -> bool ---
-    MusicRemote_CurrentEntryDidChange :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_QueueWillChange :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_ResetQueueEntries :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_SetQueueEntry :: proc(self: ^IMusicRemote, nID: i32, nPosition: i32, pchEntryText: cstring) -> bool ---
-    MusicRemote_SetCurrentQueueEntry :: proc(self: ^IMusicRemote, nID: i32) -> bool ---
-    MusicRemote_QueueDidChange :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_PlaylistWillChange :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_ResetPlaylistEntries :: proc(self: ^IMusicRemote) -> bool ---
-    MusicRemote_SetPlaylistEntry :: proc(self: ^IMusicRemote, nID: i32, nPosition: i32, pchEntryText: cstring) -> bool ---
-    MusicRemote_SetCurrentPlaylistEntry :: proc(self: ^IMusicRemote, nID: i32) -> bool ---
-    MusicRemote_PlaylistDidChange :: proc(self: ^IMusicRemote) -> bool ---
 
     HTTP_CreateHTTPRequest :: proc(self: ^IHTTP, eHTTPRequestMethod: EHTTPMethod, pchAbsoluteURL: cstring) -> HTTPRequestHandle ---
     HTTP_SetHTTPRequestContextValue :: proc(self: ^IHTTP, hRequest: HTTPRequestHandle, ulContextValue: u64) -> bool ---
@@ -4876,8 +5136,8 @@ foreign lib {
     Controller_GetControllerBindingRevision :: proc(self: ^IController, controllerHandle: ControllerHandle, pMajor: ^int, pMinor: ^int) -> bool ---
 
     UGC_CreateQueryUserUGCRequest :: proc(self: ^IUGC, unAccountID: AccountID, eListType: EUserUGCList, eMatchingUGCType: EUGCMatchingUGCType, eSortOrder: EUserUGCListSortOrder, nCreatorAppID: AppId, nConsumerAppID: AppId, unPage: u32) -> UGCQueryHandle ---
-    UGC_CreateQueryAllUGCRequestByPage :: proc(self: ^IUGC, eQueryType: EUGCQuery, eMatchingeMatchingUGCTypeFileType: EUGCMatchingUGCType, nCreatorAppID: AppId, nConsumerAppID: AppId, unPage: u32) -> UGCQueryHandle ---
-    UGC_CreateQueryAllUGCRequestByCursor :: proc(self: ^IUGC, eQueryType: EUGCQuery, eMatchingeMatchingUGCTypeFileType: EUGCMatchingUGCType, nCreatorAppID: AppId, nConsumerAppID: AppId, pchCursor: cstring) -> UGCQueryHandle ---
+    UGC_CreateQueryAllUGCRequestPage :: proc(self: ^IUGC, eQueryType: EUGCQuery, eMatchingeMatchingUGCTypeFileType: EUGCMatchingUGCType, nCreatorAppID: AppId, nConsumerAppID: AppId, unPage: u32) -> UGCQueryHandle ---
+    UGC_CreateQueryAllUGCRequestCursor :: proc(self: ^IUGC, eQueryType: EUGCQuery, eMatchingeMatchingUGCTypeFileType: EUGCMatchingUGCType, nCreatorAppID: AppId, nConsumerAppID: AppId, pchCursor: cstring) -> UGCQueryHandle ---
     UGC_CreateQueryUGCDetailsRequest :: proc(self: ^IUGC, pvecPublishedFileID: ^PublishedFileId, unNumPublishedFileIDs: u32) -> UGCQueryHandle ---
     UGC_SendQueryUGCRequest :: proc(self: ^IUGC, handle: UGCQueryHandle) -> SteamAPICall ---
     UGC_GetQueryUGCResult :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, pDetails: ^SteamUGCDetails) -> bool ---
@@ -4891,7 +5151,7 @@ foreign lib {
     UGC_GetQueryUGCNumAdditionalPreviews :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32) -> u32 ---
     UGC_GetQueryUGCAdditionalPreview :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, previewIndex: u32, pchURLOrVideoID: ^u8, cchURLSize: u32, pchOriginalFileName: ^u8, cchOriginalFileNameSize: u32, pPreviewType: ^EItemPreviewType) -> bool ---
     UGC_GetQueryUGCNumKeyValueTags :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32) -> u32 ---
-    UGC_GetQueryUGCKeyValueTag :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, pchKey: cstring, pchValue: ^u8, cchValueSize: u32) -> bool ---
+    UGC_GetQueryUGCKeyValueTag :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, keyValueTagIndex: u32, pchKey: [^]u8, cchKeySize: u32, pchValue: [^]u8, cchValueSize: u32) -> bool ---
     UGC_GetQueryFirstUGCKeyValueTag :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, pchKey: cstring, pchValue: [^]u8, cchValueSize: u32) -> bool ---
     UGC_GetQueryUGCContentDescriptors :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, pvecDescriptors: [^]EUGCContentDescriptorID, cMaxEntries: u32) -> u32 ---
     UGC_ReleaseQueryUGCRequest :: proc(self: ^IUGC, handle: UGCQueryHandle) -> bool ---
@@ -4945,8 +5205,8 @@ foreign lib {
     UGC_RemoveItemFromFavorites :: proc(self: ^IUGC, nAppId: AppId, nPublishedFileID: PublishedFileId) -> SteamAPICall ---
     UGC_SubscribeItem :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId) -> SteamAPICall ---
     UGC_UnsubscribeItem :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId) -> SteamAPICall ---
-    UGC_GetNumSubscribedItems :: proc(self: ^IUGC) -> u32 ---
-    UGC_GetSubscribedItems :: proc(self: ^IUGC, pvecPublishedFileID: ^PublishedFileId, cMaxEntries: u32) -> u32 ---
+    UGC_GetNumSubscribedItems :: proc(self: ^IUGC, bIncludeLocallyDisabled: bool) -> u32 ---
+    UGC_GetSubscribedItems :: proc(self: ^IUGC, pvecPublishedFileID: ^PublishedFileId, cMaxEntries: u32, bIncludeLocallyDisabled: bool) -> u32 ---
     UGC_GetItemState :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId) -> u32 ---
     UGC_GetItemInstallInfo :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId, punSizeOnDisk: ^u64, pchFolder: ^u8, cchFolderSize: u32, punTimeStamp: ^u32) -> bool ---
     UGC_GetItemDownloadInfo :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId, punBytesDownloaded: ^u64, punBytesTotal: ^u64) -> bool ---
@@ -4965,9 +5225,15 @@ foreign lib {
     UGC_ShowWorkshopEULA :: proc(self: ^IUGC) -> bool ---
     UGC_GetWorkshopEULAStatus :: proc(self: ^IUGC) -> SteamAPICall ---
     UGC_GetUserContentDescriptorPreferences :: proc(self: ^IUGC, pvecDescriptors: [^]EUGCContentDescriptorID, cMaxEntries: u32) -> u32 ---
-    UGC_GetNumSupportedGameVersions :: proc(self: IUGC, handle: UGCQueryHandle, index: u32) -> u32 ---
-    UGC_SetAdminQuery :: proc(self: IUGC, handle: UGCUpdateHandle, bAdminQuery: bool) -> bool ---
-    UGC_SetRequiredGameVersions :: proc(self: IUGC, handle: UGCUpdateHandle, pszGameBranchMin: cstring, pszGameBranchMax: cstring) -> bool ---
+    UGC_GetNumSupportedGameVersions :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32) -> u32 ---
+    UGC_GetSupportedGameVersionData :: proc(self: ^IUGC, handle: UGCQueryHandle, index: u32, versionIndex: u32, pchGameBranchMin: [^]u8, pchGameBranchMax: [^]u8, cchGameBranchSize: u32) -> bool ---
+    UGC_SetAdminQuery :: proc(self: ^IUGC, handle: UGCUpdateHandle, bAdminQuery: bool) -> bool ---
+    UGC_SetRequiredGameVersions :: proc(self: ^IUGC, handle: UGCUpdateHandle, pszGameBranchMin: cstring, pszGameBranchMax: cstring) -> bool ---
+    UGC_SetItemsDisabledLocally :: proc(self: ^IUGC, pvecPublishedFileIDs: ^PublishedFileId, unNumPublishedFileIDs: u32, bDisabledLocally: bool) -> bool ---
+    UGC_SetSubscriptionsLoadOrder :: proc(self: ^IUGC, pvecPublishedFileIDs: ^PublishedFileId, unNumPublishedFileIDs: u32) -> bool ---
+    UGC_MarkDownloadedItemAsUnused :: proc(self: ^IUGC, nPublishedFileID: PublishedFileId) -> bool ---
+    UGC_GetNumDownloadedItems :: proc(self: ^IUGC) -> u32 ---
+    UGC_GetDownloadedItems :: proc(self: ^IUGC, pvecPublishedFileIDs: ^PublishedFileId, cMaxEntries: u32) -> u32 ---
 
 
     HTMLSurface_Init :: proc(self: ^IHTMLSurface) -> bool ---
@@ -5040,17 +5306,31 @@ foreign lib {
     Inventory_GetItemPrice :: proc(self: ^IInventory, iDefinition: SteamItemDef, pCurrentPrice: ^u64, pBasePrice: ^u64) -> bool ---
     Inventory_StartUpdateProperties :: proc(self: ^IInventory) -> SteamInventoryUpdateHandle ---
     Inventory_RemoveProperty :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring) -> bool ---
-    Inventory_SetProperty :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring, pchPropertyValue: cstring) -> bool ---
+    Inventory_SetPropertyString :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring, pchPropertyValue: cstring) -> bool ---
     Inventory_SetPropertyBool :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring, bValue: bool) -> bool ---
     Inventory_SetPropertyInt64 :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring, nValue: i64) -> bool ---
     Inventory_SetPropertyFloat :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, nItemID: SteamItemInstanceID, pchPropertyName: cstring, flValue: f32) -> bool ---
     Inventory_SubmitUpdateProperties :: proc(self: ^IInventory, handle: SteamInventoryUpdateHandle, pResultHandle: ^SteamInventoryResult) -> bool ---
     Inventory_InspectItem :: proc(self: ^IInventory, pResultHandle: ^SteamInventoryResult, pchItemToken: cstring) -> bool ---
 
-    Timeline_SetTimelineStateDescription :: proc(self: ^ITimeline, pchDescription: cstring, flTimeDelta: f32) ---
-    Timeline_ClearTimelineStateDescription :: proc(self: ^ITimeline, flTimeDelta: f32) ---
-    Timeline_AddTimelineEvent :: proc(self: ^ITimeline, pchIcon: cstring, pchTitle: cstring, pchDescription: cstring, unPriority: u32, flStartOffsetSeconds: f32, flDurationSeconds: f32, ePossibleClip: ETimelineEventClipPriority) ---
+    Timeline_SetTimelineTooltip :: proc(self: ^ITimeline, pchDescription: cstring, flTimeDelta: f32) ---
+    Timeline_ClearTimelineTooltip :: proc(self: ^ITimeline, flTimeDelta: f32) ---
     Timeline_SetTimelineGameMode :: proc(self: ^ITimeline, eMode: ETimelineGameMode) ---
+    Timeline_AddInstantaneousTimelineEvent :: proc(self: ^ITimeline, pchTitle: cstring, pchDescription: cstring, pchIcon: cstring, unIconPriority: u32, flStartOffsetSeconds: f32, ePossibleClip: ETimelineEventClipPriority) -> TimelineEventHandle ---
+    Timeline_AddRangeTimelineEvent :: proc(self: ^ITimeline, pchTitle: cstring, pchDescription: cstring, pchIcon: cstring, unIconPriority: u32, flStartOffsetSeconds: f32, flDuration: f32, ePossibleClip: ETimelineEventClipPriority) -> TimelineEventHandle ---
+    Timeline_StartRangeTimelineEvent :: proc(self: ^ITimeline, pchTitle: cstring, pchDescription: cstring, pchIcon: cstring, unPriority: u32, flStartOffsetSeconds: f32, ePossibleClip: ETimelineEventClipPriority) -> TimelineEventHandle ---
+    Timeline_UpdateRangeTimelineEvent :: proc(self: ^ITimeline, ulEvent: TimelineEventHandle, pchTitle: cstring, pchDescription: cstring, pchIcon: cstring, unPriority: u32, ePossibleClip: ETimelineEventClipPriority) ---
+    Timeline_EndRangeTimelineEvent :: proc(self: ^ITimeline, ulEvent: TimelineEventHandle, flEndOffsetSeconds: f32) ---
+    Timeline_RemoveTimelineEvent :: proc(self: ^ITimeline, ulEvent: TimelineEventHandle) ---
+    Timeline_DoesEventRecordingExist :: proc(self: ^ITimeline, ulEvent: TimelineEventHandle) -> SteamAPICall ---
+    Timeline_StartGamePhase :: proc(self: ^ITimeline) ---
+    Timeline_EndGamePhase :: proc(self: ^ITimeline) ---
+    Timeline_SetGamePhaseID :: proc(self: ^ITimeline, pchPhaseID: cstring) ---
+    Timeline_DoesGamePhaseRecordingExist :: proc(self: ^ITimeline, pchPhaseID: cstring) -> SteamAPICall ---
+    Timeline_AddGamePhaseTag :: proc(self: ^ITimeline, pchTagName: cstring, pchTagIcon: cstring, pchTagGroup: cstring, unPriority: u32) ---
+    Timeline_SetGamePhaseAttribute :: proc(self: ^ITimeline, pchAttributeGroup: cstring, pchAttributeValue: cstring, unPriority: u32) ---
+    Timeline_OpenOverlayToGamePhase :: proc(self: ^ITimeline, pchPhaseID: cstring) ---
+    Timeline_OpenOverlayToTimelineEvent :: proc(self: ^ITimeline, ulEvent: TimelineEventHandle) ---
 
     Video_GetVideoURL :: proc(self: ^IVideo, unVideoAppID: AppId) ---
     Video_IsBroadcasting :: proc(self: ^IVideo, pnNumViewers: ^int) -> bool ---
@@ -5066,12 +5346,24 @@ foreign lib {
 
     RemotePlay_GetSessionCount :: proc(self: ^IRemotePlay) -> u32 ---
     RemotePlay_GetSessionID :: proc(self: ^IRemotePlay, iSessionIndex: i32) -> RemotePlaySessionID ---
+    RemotePlay_BSessionRemotePlayTogether :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> bool ---
     RemotePlay_GetSessionSteamID :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> CSteamID ---
+    RemotePlay_GetSessionGuestID :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> u32 ---
+    RemotePlay_GetSmallSessionAvatar :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> i32 ---
+    RemotePlay_GetMediumSessionAvatar :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> i32 ---
+    RemotePlay_GetLargeSessionAvatar :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> i32 ---
     RemotePlay_GetSessionClientName :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> cstring ---
     RemotePlay_GetSessionClientFormFactor :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID) -> ESteamDeviceFormFactor ---
-    RemotePlay_BGetSessionClientResolution :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID, pnResolutionX: ^int, pnResolutionY: ^int) -> bool ---
-    RemotePlay_BStartRemotePlayTogether :: proc(self: ^IRemotePlay, bShowOverlay: bool) -> bool ---
+    RemotePlay_BGetSessionClientResolution :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID, pnResolutionX: ^i32, pnResolutionY: ^i32) -> bool ---
+    RemotePlay_ShowRemotePlayTogetherUI :: proc(self: ^IRemotePlay) -> bool ---
     RemotePlay_BSendRemotePlayTogetherInvite :: proc(self: ^IRemotePlay, steamIDFriend: CSteamID) -> bool ---
+    RemotePlay_BEnableRemotePlayTogetherDirectInput :: proc(self: ^IRemotePlay) -> bool ---
+    RemotePlay_DisableRemotePlayTogetherDirectInput :: proc(self: ^IRemotePlay) ---
+    RemotePlay_GetInput :: proc(self: ^IRemotePlay, pInput: ^RemotePlayInput, unMaxEvents: u32) -> u32 ---
+    RemotePlay_SetMouseVisibility :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID, bVisible: bool) ---
+    RemotePlay_SetMousePosition :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID, flNormalizedX: f32, flNormalizedY: f32) ---
+    RemotePlay_CreateMouseCursor :: proc(self: ^IRemotePlay, nWidth: i32, nHeight: i32, nHotX: i32, nHotY: i32, pBGRA: rawptr, nPitch: i32) -> RemotePlayCursorID ---
+    RemotePlay_SetMouseCursor :: proc(self: ^IRemotePlay, unSessionID: RemotePlaySessionID, unCursorID: RemotePlayCursorID) ---
 
     NetworkingMessages_SendMessageToUser :: proc(self: ^INetworkingMessages, identityRemote: ^SteamNetworkingIdentity, pubData: rawptr, cubData: u32, nSendFlags: i32, nRemoteChannel: i32) -> EResult ---
     NetworkingMessages_ReceiveMessagesOnChannel :: proc(self: ^INetworkingMessages, nLocalChannel: i32, ppOutMessages: ^^SteamNetworkingMessage, nMaxMessages: i32) -> i32 ---
@@ -5152,12 +5444,12 @@ foreign lib {
     NetworkingUtils_SetConnectionConfigValueInt32 :: proc(self: ^INetworkingUtils, hConn: HSteamNetConnection, eValue: ESteamNetworkingConfigValue, val: i32) -> bool ---
     NetworkingUtils_SetConnectionConfigValueFloat :: proc(self: ^INetworkingUtils, hConn: HSteamNetConnection, eValue: ESteamNetworkingConfigValue, val: f32) -> bool ---
     NetworkingUtils_SetConnectionConfigValueString :: proc(self: ^INetworkingUtils, hConn: HSteamNetConnection, eValue: ESteamNetworkingConfigValue, val: cstring) -> bool ---
-    NetworkingUtils_SetGlobalCallbacSteamNetConnectionStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetConnectionStatusChanged) -> bool ---
-    NetworkingUtils_SetGlobalCallbacSteamNetAuthenticationStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetAuthenticationStatusChanged) -> bool ---
-    NetworkingUtils_SetGlobalCallbacSteamRelayNetworkStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamRelayNetworkStatusChanged) -> bool ---
-    NetworkingUtils_SetGlobalCallbacFakeIPResult :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingFakeIPResult) -> bool ---
-    NetworkingUtils_SetGlobalCallbacMessagesSessionRequest :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingMessagesSessionRequest) -> bool ---
-    NetworkingUtils_SetGlobalCallbacMessagesSessionFailed :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingMessagesSessionFailed) -> bool ---
+    NetworkingUtils_SetGlobalCallback_SteamNetConnectionStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetConnectionStatusChanged) -> bool ---
+    NetworkingUtils_SetGlobalCallback_SteamNetAuthenticationStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetAuthenticationStatusChanged) -> bool ---
+    NetworkingUtils_SetGlobalCallback_SteamRelayNetworkStatusChanged :: proc(self: ^INetworkingUtils, fnCallback: FnSteamRelayNetworkStatusChanged) -> bool ---
+    NetworkingUtils_SetGlobalCallback_FakeIPResult :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingFakeIPResult) -> bool ---
+    NetworkingUtils_SetGlobalCallback_MessagesSessionRequest :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingMessagesSessionRequest) -> bool ---
+    NetworkingUtils_SetGlobalCallback_MessagesSessionFailed :: proc(self: ^INetworkingUtils, fnCallback: FnSteamNetworkingMessagesSessionFailed) -> bool ---
     NetworkingUtils_SetConfigValue :: proc(self: ^INetworkingUtils, eValue: ESteamNetworkingConfigValue, eScopeType: ESteamNetworkingConfigScope, scopeObj: int, eDataType: ESteamNetworkingConfigDataType, pArg: rawptr) -> bool ---
     NetworkingUtils_SetConfigValueStruct :: proc(self: ^INetworkingUtils, opt: ^SteamNetworkingConfigValue, eScopeType: ESteamNetworkingConfigScope, scopeObj: int) -> bool ---
     NetworkingUtils_GetConfigValue :: proc(self: ^INetworkingUtils, eValue: ESteamNetworkingConfigValue, eScopeType: ESteamNetworkingConfigScope, scopeObj: int, pOutDataType: ^ESteamNetworkingConfigDataType, pResult: rawptr, cbResult: ^int) -> ESteamNetworkingGetConfigValueResult ---
@@ -5193,7 +5485,7 @@ foreign lib {
     GameServer_SetGameData :: proc(self: ^IGameServer, pchGameData: cstring) ---
     GameServer_SetRegion :: proc(self: ^IGameServer, pszRegion: cstring) ---
     GameServer_SetAdvertiseServerActive :: proc(self: ^IGameServer, bActive: bool) ---
-    GameServer_GetAuthSessionTicket :: proc(self: ^IGameServer, pTicket: rawptr, cbMaxTicket: i32, pcbTicket: ^u32) -> HAuthTicket ---
+    GameServer_GetAuthSessionTicket :: proc(self: ^IGameServer, pTicket: rawptr, cbMaxTicket: i32, pcbTicket: ^u32, #by_ptr pSnid: SteamNetworkingIdentity) -> HAuthTicket ---
     GameServer_BeginAuthSession :: proc(self: ^IGameServer, pAuthTicket: rawptr, cbAuthTicket: i32, steamID: CSteamID) -> EBeginAuthSessionResult ---
     GameServer_EndAuthSession :: proc(self: ^IGameServer, steamID: CSteamID) ---
     GameServer_CancelAuthTicket :: proc(self: ^IGameServer, hAuthTicket: HAuthTicket) ---
@@ -5259,7 +5551,6 @@ iSteamControllerCallbacks :: 2800
 iSteamUGCCallbacks :: 3400
 iSteamStreamClientCallbacks :: 3500
 iSteamMusicCallbacks :: 4000
-iSteamMusicRemoteCallbacks :: 4100
 iSteamGameNotificationCallbacks :: 4400
 iSteamHTMLSurfaceCallbacks :: 4500
 iSteamVideoCallbacks :: 4600
@@ -5270,6 +5561,7 @@ iSteamPartiesCallbacks :: 5300
 iSteamSTARCallbacks :: 5500
 iSteamRemotePlayCallbacks :: 5700
 iSteamChatCallbacks :: 5900
+iSteamTimelineCallbacks :: 6000
 
 
 // From: isteamapps.h
@@ -5349,9 +5641,6 @@ ICallback :: enum i32 {
     FriendsGetFollowerCount                                = iSteamFriendsCallbacks + 44,
     FriendsIsFollowing                                     = iSteamFriendsCallbacks + 45,
     FriendsEnumerateFollowingList                          = iSteamFriendsCallbacks + 46,
-
-    // Purpose: reports the result of an attempt to change the user's persona name
-    SetPersonaNameResponse                                 = iSteamFriendsCallbacks + 47,
 
     // Purpose: Invoked when the status of unread messages changes
     UnreadChatMessagesChanged                              = iSteamFriendsCallbacks + 48,
@@ -5542,31 +5831,6 @@ ICallback :: enum i32 {
     //			at this point, the lobby has been joined and is ready for use
     //			a LobbyEnter_t callback will also be received (since the local user is joining their own lobby)
     FavoritesListAccountsUpdated                           = iSteamMatchmakingCallbacks + 16,
-
-    // Callbacks for ISteamGameSearch (which go through the regular Steam callback registration system)
-    SearchForGameProgressCallback                          = iSteamGameSearchCallbacks + 1,
-
-    // notification to all players searching that a game has been found
-    SearchForGameResultCallback                            = iSteamGameSearchCallbacks + 2,
-
-    // ISteamGameSearch : Game Host API callbacks
-
-    // callback from RequestPlayersForGame when the matchmaking service has started or ended search
-    // callback will also follow a call from CancelRequestPlayersForGame - m_bSearchInProgress will be false
-    RequestPlayersForGameProgressCallback                  = iSteamGameSearchCallbacks + 11,
-
-    // callback from RequestPlayersForGame
-    // one of these will be sent per player
-    // followed by additional callbacks when players accept or decline the game
-    RequestPlayersForGameResultCallback                    = iSteamGameSearchCallbacks + 12,
-    RequestPlayersForGameFinalResultCallback               = iSteamGameSearchCallbacks + 13,
-
-    // this callback confirms that results were received by the matchmaking service for this player
-    SubmitPlayerResultResultCallback                       = iSteamGameSearchCallbacks + 14,
-
-    // this callback confirms that the game is recorded as complete on the matchmaking service
-    // the next call to RequestPlayersForGame will generate a new unique game ID
-    EndGameResultCallback                                  = iSteamGameSearchCallbacks + 15,
 
     // Steam has responded to the user request to join a party via the given Beacon ID.
     // If successful, the connect string contains game-specific instructions to connect
@@ -5973,6 +6237,17 @@ ICallback :: enum i32 {
 
     // The floating on-screen keyboard has been closed
     FloatingGamepadTextInputDismissed                      = iSteamUtilsCallbacks + 38,
+
+    SteamRemotePlaySessionConnected                        = iSteamRemotePlayCallbacks + 1,
+    SteamRemotePlaySessionDisconnected                     = iSteamRemotePlayCallbacks + 2,
+    SteamRemotePlayTogetherGuestInvite                     = iSteamRemotePlayCallbacks + 3,
+    SteamRemotePlaySessionAvatarLoaded                     = iSteamRemotePlayCallbacks + 4,
+
+    // Result of DoesGamePhaseRecordingExist
+    SteamTimelineGamePhaseRecordingExists                  = iSteamTimelineCallbacks + 1,
+
+    // Result of DoesEventRecordingExist
+    SteamTimelineEventRecordingExists                      = iSteamTimelineCallbacks + 2,
 }
 
 /// Internal structure used in manual callback dispatch

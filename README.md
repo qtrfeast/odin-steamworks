@@ -5,7 +5,7 @@ Odin bindings for Valve's [Steamworks API](https://partner.steamgames.com/doc/sd
 
 the Steamworks API also includes the [Steam GameNetworkingSockets](https://github.com/ValveSoftware/GameNetworkingSockets)
 
-Current Steamworks SDK version: `1.60`
+Current Steamworks SDK version: `1.64`
 
 Latest tested Odin version: `dev-2024-09:c6b551d2c`
 
@@ -26,6 +26,9 @@ Initially a custom generator was used to create the bindings, which was removed 
 It used the `steamworks_api.json` to generate a single source file.
 
 Note: The naming is slightly different than in the C/C++ API. For instance, things aren't prefixed with `Steam`, `m_`, `k_`, etc. Also `_t` suffixes for structs aren't used.
+
+## Updating the SDK
+`tools/sdk_delta.py` compares the binding against a new SDK's `steam_api.json` and lists added, removed, and changed functions, enums, and structs; it can also regenerate an enum in the binding's style and check every foreign declaration against a library's exports. See the docstring for its modes.
 
 ## Contributing
 Contributions are welcome, especially bugfixes! Please submit a pull request here on Github.
