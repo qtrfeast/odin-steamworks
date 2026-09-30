@@ -10,8 +10,11 @@ when ODIN_OS == .Windows {
     foreign import lib "redistributable_bin/osx/libsteam_api.dylib"
 }
 
-// VALVE_CALLBACK_PACK_SMALL / VALVE_CALLBACK_PACK_LARGE
-CALLBACK_PACK_LARGE :: #config(STEAMWORKS_CALLBACK_PACK_LARGE, true)
+// VALVE_CALLBACK_PACK_SMALL / VALVE_CALLBACK_PACK_LARGE. steam_api_common.h
+// packs callback structs to 8 bytes on Windows and 4 everywhere else; reading
+// a 4-packed struct with 8-byte alignment shifts every field after the first
+// 64-bit member (a CreateItemResult's nPublishedFileId comes back as garbage).
+CALLBACK_PACK_LARGE :: #config(STEAMWORKS_CALLBACK_PACK_LARGE, ODIN_OS == .Windows)
 CALLBACK_ALIGN :: 8 when CALLBACK_PACK_LARGE else 4
 
 CGameID :: struct #raw_union {
